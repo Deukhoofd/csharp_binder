@@ -11,7 +11,17 @@ fn build_empty_with_namespace() {
     let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
     builder.set_namespace("foo");
     let script = builder.build().unwrap();
-    assert_eq!(script, "namespace foo\n{\n}\n")
+    assert_eq!(
+        script,
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
+{
+}
+"
+    )
 }
 
 #[test]
@@ -20,7 +30,14 @@ fn build_empty_with_type() {
     let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
     builder.set_type("foo");
     let script = builder.build().unwrap();
-    assert_eq!(script, "internal static class foo\n{\n}\n")
+    assert_eq!(
+        script,
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+internal static class foo\n{\n}\n"
+    )
 }
 
 #[test]
@@ -32,7 +49,11 @@ fn build_empty_with_namespace_and_type() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -51,7 +72,11 @@ fn build_with_void_function() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -78,7 +103,11 @@ fn build_with_longer_named_void_function() {
     let script = builder.build().unwrap();
     assert_eq!(
             script,
-            "namespace foo
+            "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -106,7 +135,11 @@ fn build_with_u8_function() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -133,7 +166,11 @@ fn build_with_u8_ptr_function() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -160,7 +197,11 @@ fn build_with_void_function_with_parameters() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -189,7 +230,11 @@ fn build_with_void_function_with_pointer_parameters() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -220,7 +265,11 @@ fn build_with_void_function_with_outer_doc_documentation() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -252,7 +301,11 @@ fn build_void_function_inside_module() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -279,7 +332,11 @@ fn build_enum() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -309,7 +366,11 @@ fn build_enum_with_values() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -341,7 +402,11 @@ fn build_enum_with_values_and_documentation() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -383,7 +448,11 @@ fn build_enum_with_values_and_documentation_for_keys() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -429,11 +498,15 @@ fn build_struct() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct Foo
         {
             /// <remarks>u8</remarks>
@@ -468,14 +541,18 @@ fn build_struct_with_documentation() {
     let script = builder.build().unwrap();
     assert_eq!(
         script,
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
         /// <summary>
         /// test documentation struct
         /// </summary>
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct Foo
         {
             /// <summary>
@@ -532,7 +609,11 @@ pub extern "C" fn foo() -> KnownEnum {}
     assert!(!script.is_err());
     assert_eq!(
         script.unwrap(),
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -581,7 +662,11 @@ pub extern "C" fn foo() -> KnownEnum {}
     assert!(!script.is_err());
     assert_eq!(
         script.unwrap(),
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -626,7 +711,11 @@ pub extern "C" fn foo() -> KnownEnum {}
     assert!(!script.is_err());
     assert_eq!(
         script.unwrap(),
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -671,7 +760,11 @@ pub extern "C" fn foo() -> KnownEnum {}
     assert!(!script.is_err());
     assert_eq!(
         script.unwrap(),
-        "namespace foo
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
 {
     internal static class bar
     {
@@ -682,4 +775,34 @@ pub extern "C" fn foo() -> KnownEnum {}
     }
 }\n"
     );
+}
+
+#[test]
+pub fn test() {
+    let mut configuration = CSharpConfiguration::new();
+    let rust_file = r#"
+/// Just a random return enum
+#[repr(u8)]
+enum ReturnEnum {
+    Val1,
+    Val2,
+}
+
+/// An input struct we expect
+#[repr(C)]
+struct InputStruct {
+    field_a: u16,
+    /// This field is used for floats!
+    field_b: f64,
+}
+
+pub extern "C" fn foo(a: InputStruct) -> ReturnEnum {
+}
+"#;
+    let mut builder =
+        CSharpBuilder::new(rust_file, "foo", &mut configuration).expect("Failed to parse file");
+    builder.set_namespace("MainNamespace");
+    builder.set_type("InsideClass");
+    let script = builder.build().expect("Failed to build");
+    println!("{}", script);
 }

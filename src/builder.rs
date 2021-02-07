@@ -13,6 +13,17 @@ pub fn parse_script(script: &str) -> syn::Result<syn::File> {
 pub fn build_csharp(builder: &CSharpBuilder) -> Result<String, Error> {
     let mut script: String = "".to_string();
     let mut indent = 0;
+
+    write_line(
+        &mut script,
+        "// Automatically generated, do not edit!".to_string(),
+        indent,
+    )?;
+    for using in &builder.usings {
+        write_line(&mut script, format!("using {};", using), indent)?;
+    }
+    writeln!(script);
+
     match &builder.namespace {
         None => {}
         Some(ns) => {
@@ -292,7 +303,7 @@ fn write_struct(
 
     write_line(
         str,
-        "[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]".to_string(),
+        "[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]".to_string(),
         *indents,
     )?;
     write_line(
