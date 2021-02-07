@@ -517,13 +517,19 @@ fn get_repr_attribute_value(attr: &Attribute) -> Result<Option<syn::Path>, Error
 
 fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(String, String), Error> {
     if path.segments.len() != 1 {
-        return Err(Error::UnsupportedError(
-            format!(
-                "Types with a path longer than 1 are not supported. At {}",
-                path.get_ident().unwrap()
-            ),
-            path.span(),
-        ));
+        return match path.get_ident() {
+            None => Err(Error::UnsupportedError(
+                "Types with a path without identifier are not supported.".to_string(),
+                path.span(),
+            )),
+            Some(identifier) => Err(Error::UnsupportedError(
+                format!(
+                    "Types with a path longer than 1 are not supported. At {}",
+                    identifier
+                ),
+                path.span(),
+            )),
+        };
     }
     return match path.segments.last() {
         Some(v) => {
