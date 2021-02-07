@@ -114,18 +114,15 @@ pub(crate) struct CSharpType {
 /// type registry, but further features such as ignore patterns will likely be added here.
 pub struct CSharpConfiguration {
     known_types: HashMap<String, CSharpType>,
-}
-
-impl Default for CSharpConfiguration {
-    fn default() -> Self {
-        Self::new()
-    }
+    csharp_version: u8,
 }
 
 impl CSharpConfiguration {
-    pub fn new() -> Self {
+    /// Create a new C# configuration. Input parameter is the target version of C#, i.e. C# 7, 8, 9, etc.
+    pub fn new(csharp_version: u8) -> Self {
         Self {
             known_types: HashMap::new(),
+            csharp_version,
         }
     }
 

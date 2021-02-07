@@ -540,16 +540,32 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
                 "u32" => Ok(("uint".to_string(), "u32".to_string())),
                 "u64" => Ok(("ulong".to_string(), "u64".to_string())),
                 "u128" => Ok(("System.Numerics.BigInteger".to_string(), "u128".to_string())),
-                // Use new C# 9 native integer type for size, as it should be the same.
-                "usize" => Ok(("nuint".to_string(), "usize".to_string())),
+                "usize" => {
+                    if builder.configuration.borrow().csharp_version >= 9 {
+                        // Use new C# 9 native integer type for size, as it should be the same.
+                        Ok(("nuint".to_string(), "usize".to_string()))
+                    }
+                    else{
+                        // FIXME: Not strictly correct on 32 bit computers. 
+                        Ok(("ulong".to_string(), "usize".to_string()))
+                    }
+                },
 
                 "i8" => Ok(("sbyte".to_string(), "i8".to_string())),
                 "i16" => Ok(("short".to_string(), "i16".to_string())),
                 "i32" => Ok(("int".to_string(), "i32".to_string())),
                 "i64" => Ok(("long".to_string(), "i64".to_string())),
                 "i128" => Ok(("System.Numerics.BigInteger".to_string(), "i128".to_string())),
-                // Use new C# 9 native integer type for size, as it should be the same.
-                "isize" => Ok(("nint".to_string(), "isize".to_string())),
+                "isize" => {
+                    if builder.configuration.borrow().csharp_version >= 9 {
+                        // Use new C# 9 native integer type for size, as it should be the same.
+                        Ok(("nint".to_string(), "isize".to_string()))
+                    }
+                    else{
+                        // FIXME: Not strictly correct on 32 bit computers. 
+                        Ok(("long".to_string(), "isize".to_string()))
+                    }
+                },
 
                 "f32" => Ok(("float".to_string(), "f32".to_string())),
                 "f64" => Ok(("double".to_string(), "f64".to_string())),
