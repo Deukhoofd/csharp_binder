@@ -22,7 +22,7 @@ pub fn build_csharp(builder: &CSharpBuilder) -> Result<String, Error> {
     for using in &builder.usings {
         write_line(&mut script, format!("using {};", using), indent)?;
     }
-    writeln!(script);
+    writeln!(script)?;
 
     match &builder.namespace {
         None => {}
