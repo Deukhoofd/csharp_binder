@@ -3,6 +3,13 @@ name = "csharp_binder"
 version = "0.1.0"
 authors = ["Deukhoofd <Deukhoofd@gmail.com>"]
 edition = "2018"
+license = "MIT"
+description = "A library to generate C# bindings for a Rust foreign function interface (FFI)"
+homepage = "https://github.com/Deukhoofd/csharp_binder/"
+repository = "https://github.com/Deukhoofd/csharp_binder/"
+readme = "README.md"
+keywords = ["ffi", "csharp", "C#", "bindgen", "binding"]
+categories = ["external-ffi-bindings"]
 
 [dependencies]
 "syn" = {version = "1.0.60", features=["full"]}
