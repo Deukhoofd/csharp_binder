@@ -8,7 +8,7 @@ description = "A library to generate C# bindings for a Rust foreign function int
 homepage = "https://github.com/Deukhoofd/csharp_binder/"
 repository = "https://github.com/Deukhoofd/csharp_binder/"
 readme = "README.md"
-keywords = ["ffi", "csharp", "C#", "bindgen", "binding"]
+keywords = ["ffi", "csharp", "bindgen", "binding"]
 categories = ["external-ffi-bindings"]
 
 [dependencies]
