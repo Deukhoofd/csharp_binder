@@ -486,47 +486,49 @@ fn get_repr_attribute_value(attr: &Attribute) -> Result<Option<syn::Path>, Error
 }
 
 fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(String, String), Error> {
-    if path.segments.len() == 1 {
-        return match path.segments.last() {
-            Some(v) => {
-                match v.ident.to_string().as_str() {
-                    "u8" => Ok(("byte".to_string(), "u8".to_string())),
-                    "u16" => Ok(("ushort".to_string(), "u16".to_string())),
-                    "u32" => Ok(("uint".to_string(), "u32".to_string())),
-                    "u64" => Ok(("ulong".to_string(), "u64".to_string())),
-                    "u128" => Ok(("System.Numerics.BigInteger".to_string(), "u128".to_string())),
-                    // Use new C# 9 native integer type for size, as it should be the same.
-                    "usize" => Ok(("nuint".to_string(), "u128".to_string())),
-
-                    "i8" => Ok(("sbyte".to_string(), "i8".to_string())),
-                    "i16" => Ok(("short".to_string(), "i16".to_string())),
-                    "i32" => Ok(("int".to_string(), "i32".to_string())),
-                    "i64" => Ok(("long".to_string(), "i64".to_string())),
-                    "i128" => Ok(("System.Numerics.BigInteger".to_string(), "i128".to_string())),
-                    // Use new C# 9 native integer type for size, as it should be the same.
-                    "isize" => Ok(("nint".to_string(), "u128".to_string())),
-
-                    "f32" => Ok(("float".to_string(), "f32".to_string())),
-                    "f64" => Ok(("double".to_string(), "f64".to_string())),
-
-                    "char" => Ok(("char".to_string(), "char".to_string())),
-
-                    "bool" => Err(Error::UnsupportedError("Found a boolean type. Due to differing sizes on different operating systems this is not supported for extern C functions.".to_string())),
-                    "str" => Err(Error::UnsupportedError("Found a str type. This is not supported, please use a char pointer instead.".to_string())),
-
-                    _ => {
-                        resolve_known_type_name(&builder, v)
-                    },
-                }
-            }
-            None => Err(Error::UnsupportedError(
-                "Types without a path are not supported".to_string(),
-            )),
-        };
+    if path.segments.len() != 1 {
+        return Err(Error::UnsupportedError(
+            "Types with a path longer than 1 are not supported, due to type resolving not really being a thing at the moment.".to_string(),
+        ));
     }
-    Err(Error::UnsupportedError(
-        "Types with a path longer than 1 are not supported, due to type resolving not really being a thing at the moment.".to_string(),
-    ))
+    return match path.segments.last() {
+        Some(v) => {
+            match v.ident.to_string().as_str() {
+                // First attempt to resolve the primitive types
+                "u8" => Ok(("byte".to_string(), "u8".to_string())),
+                "u16" => Ok(("ushort".to_string(), "u16".to_string())),
+                "u32" => Ok(("uint".to_string(), "u32".to_string())),
+                "u64" => Ok(("ulong".to_string(), "u64".to_string())),
+                "u128" => Ok(("System.Numerics.BigInteger".to_string(), "u128".to_string())),
+                // Use new C# 9 native integer type for size, as it should be the same.
+                "usize" => Ok(("nuint".to_string(), "u128".to_string())),
+
+                "i8" => Ok(("sbyte".to_string(), "i8".to_string())),
+                "i16" => Ok(("short".to_string(), "i16".to_string())),
+                "i32" => Ok(("int".to_string(), "i32".to_string())),
+                "i64" => Ok(("long".to_string(), "i64".to_string())),
+                "i128" => Ok(("System.Numerics.BigInteger".to_string(), "i128".to_string())),
+                // Use new C# 9 native integer type for size, as it should be the same.
+                "isize" => Ok(("nint".to_string(), "u128".to_string())),
+
+                "f32" => Ok(("float".to_string(), "f32".to_string())),
+                "f64" => Ok(("double".to_string(), "f64".to_string())),
+
+                "char" => Ok(("char".to_string(), "char".to_string())),
+
+                "bool" => Err(Error::UnsupportedError("Found a boolean type. Due to differing sizes on different operating systems this is not supported for extern C functions.".to_string())),
+                "str" => Err(Error::UnsupportedError("Found a str type. This is not supported, please use a char pointer instead.".to_string())),
+
+                // If the type is not a primitive type, attempt to resolve the type from our type database.
+                _ => {
+                    resolve_known_type_name(&builder, v)
+                },
+            }
+        }
+        None => Err(Error::UnsupportedError(
+            "Types without a path are not supported".to_string(),
+        )),
+    };
 }
 
 fn resolve_known_type_name(
