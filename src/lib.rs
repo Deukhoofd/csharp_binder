@@ -232,8 +232,8 @@ pub enum Error {
     ParseError(syn::Error),
     IOError(std::io::Error),
     FmtError(std::fmt::Error),
-    UnsupportedError(String),
-    UnknownType(String),
+    UnsupportedError(String, proc_macro2::Span),
+    UnknownType(String, proc_macro2::Span),
 }
 
 impl std::fmt::Display for Error {
@@ -242,8 +242,28 @@ impl std::fmt::Display for Error {
             Error::ParseError(e) => e.fmt(f),
             Error::IOError(e) => e.fmt(f),
             Error::FmtError(e) => e.fmt(f),
-            Error::UnsupportedError(e) => f.write_str(e),
-            Error::UnknownType(e) => f.write_str(e),
+            Error::UnsupportedError(e, span) => {
+                f.write_str(e)?;
+                f.write_str(
+                    format!(
+                        ". At line {}, position {}",
+                        span.start().line,
+                        span.start().column
+                    )
+                    .as_str(),
+                )
+            }
+            Error::UnknownType(e, span) => {
+                f.write_str(e)?;
+                f.write_str(
+                    format!(
+                        ". At At line {}, position {}",
+                        span.start().line,
+                        span.start().column
+                    )
+                    .as_str(),
+                )
+            }
         }
     }
 }

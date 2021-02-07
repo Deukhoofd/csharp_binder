@@ -1,6 +1,7 @@
 use crate::{CSharpBuilder, Error};
 use std::borrow::Borrow;
 use std::fmt::Write;
+use syn::spanned::Spanned;
 use syn::{
     Attribute, Expr, FnArg, Item, ItemEnum, ItemFn, ItemStruct, Meta, NestedMeta, Pat, ReturnType,
     Type,
@@ -122,6 +123,7 @@ fn write_function(
             FnArg::Receiver(_) => {
                 return Err(Error::UnsupportedError(
                     "Receiver parameters aren't supported".to_string(),
+                    input.span(),
                 ))
             }
             FnArg::Typed(t) => match t.pat.borrow() {
@@ -136,6 +138,7 @@ fn write_function(
                 _ => {
                     return Err(Error::UnsupportedError(
                         "Parameters that are not identity aren't supported".to_string(),
+                        input.span(),
                     ))
                 }
             },
@@ -211,6 +214,7 @@ fn write_enum(
                             "C" => {
                                 return Err(Error::UnsupportedError(
                                     "The size of a repr[C] enum is not specifically defined. Please use repr[u*] to define an actual size".to_string(),
+                                    identifier.span()
                                 ))
                             }
                             _ => size_option = Some(convert_type_path(&val, builder)?),
@@ -239,6 +243,7 @@ fn write_enum(
         if !variant.fields.is_empty() {
             return Err(Error::UnsupportedError(
                 "Enum with values with fields is not supported".to_string(),
+                variant.span(),
             ));
         }
 
@@ -398,27 +403,35 @@ fn convert_type_name(t: &syn::Type, builder: &CSharpBuilder) -> Result<(String, 
     match t {
         Type::Array(_) => Err(Error::UnsupportedError(
             "Using rust arrays from ffi is not supported.".to_string(),
+            t.span()
         )),
         Type::BareFn(_) => Err(Error::UnsupportedError(
             "Using bare functions from ffi is not supported.".to_string(),
+            t.span()
         )),
         Type::Group(_) => Err(Error::UnsupportedError(
-            "Using type group from ffi is not supported.".to_string(),
+            "Using type group from ffi is not supported.".to_string(),           
+            t.span()
         )),
         Type::ImplTrait(_) => Err(Error::UnsupportedError(
             "Using rust impl traits from ffi is not supported.".to_string(),
+            t.span()
         )),
         Type::Infer(_) => Err(Error::UnsupportedError(
             "Using type infers is not supported. We can't generate a binding if we do not know the type.".to_string(),
+            t.span()
         )),
         Type::Macro(_) => Err(Error::UnsupportedError(
             "Using rust macros from ffi is not supported.".to_string(),
+            t.span()
         )),
         Type::Never(_) => Err(Error::UnsupportedError(
             "Using rust never type from ffi is not supported.".to_string(),
+            t.span()
         )),
         Type::Paren(_) => Err(Error::UnsupportedError(
             "Using rust parenthesis from ffi is not supported.".to_string(),
+            t.span()
         )),
         Type::Path(p) => convert_type_path(&p.path, builder),
         Type::Ptr(ptr) => {
@@ -433,16 +446,22 @@ fn convert_type_name(t: &syn::Type, builder: &CSharpBuilder) -> Result<(String, 
             ))
         }
         Type::Slice(_) => Err(Error::UnsupportedError(
-            "Using rust slices from ffi is not supported.".to_string(),
+            "Using rust slices from ffi is not supported.".to_string(),            
+            t.span()
         )),
         Type::TraitObject(_) => Err(Error::UnsupportedError(
             "Using rust traits from ffi is not supported.".to_string(),
+            t.span()
         )),
         Type::Tuple(_) => Err(Error::UnsupportedError(
             "Using rust tuples from ffi is not supported.".to_string(),
+            t.span()
+
         )),
         Type::Verbatim(_) => Err(Error::UnsupportedError(
             "Using rust verbatim from ffi is not supported.".to_string(),
+            t.span()
+
         )),
         Type::__TestExhaustive(_) => unreachable!(),
     }
@@ -499,7 +518,11 @@ fn get_repr_attribute_value(attr: &Attribute) -> Result<Option<syn::Path>, Error
 fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(String, String), Error> {
     if path.segments.len() != 1 {
         return Err(Error::UnsupportedError(
-            "Types with a path longer than 1 are not supported, due to type resolving not really being a thing at the moment.".to_string(),
+            format!(
+                "Types with a path longer than 1 are not supported. At {}",
+                path.get_ident().unwrap()
+            ),
+            path.span(),
         ));
     }
     return match path.segments.last() {
@@ -527,8 +550,9 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
 
                 "char" => Ok(("char".to_string(), "char".to_string())),
 
-                "bool" => Err(Error::UnsupportedError("Found a boolean type. Due to differing sizes on different operating systems this is not supported for extern C functions.".to_string())),
-                "str" => Err(Error::UnsupportedError("Found a str type. This is not supported, please use a char pointer instead.".to_string())),
+                "bool" => Err(Error::UnsupportedError("Found a boolean type. Due to differing sizes on different operating systems this is not supported for extern C functions.".to_string(),             v.ident.span()
+                )),
+                "str" => Err(Error::UnsupportedError("Found a str type. This is not supported, please use a char pointer instead.".to_string(), v.ident.span())),
 
                 // If the type is not a primitive type, attempt to resolve the type from our type database.
                 _ => {
@@ -538,6 +562,7 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
         }
         None => Err(Error::UnsupportedError(
             "Types without a path are not supported".to_string(),
+            path.span(),
         )),
     };
 }
@@ -549,10 +574,10 @@ fn resolve_known_type_name(
     let conf = builder.configuration.borrow();
     let t = conf.get_known_type(v.ident.to_string().as_str());
     match t {
-        None => Err(Error::UnknownType(format!(
-            "Type with name '{}' was not found",
-            v.ident.to_string()
-        ))),
+        None => Err(Error::UnknownType(
+            format!("Type with name '{}' was not found", v.ident.to_string()),
+            v.ident.span(),
+        )),
         Some(t) => {
             let inside_type = &builder.type_name;
             if builder.namespace == t.namespace
