@@ -541,7 +541,7 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
                 "u64" => Ok(("ulong".to_string(), "u64".to_string())),
                 "u128" => Ok(("System.Numerics.BigInteger".to_string(), "u128".to_string())),
                 // Use new C# 9 native integer type for size, as it should be the same.
-                "usize" => Ok(("nuint".to_string(), "u128".to_string())),
+                "usize" => Ok(("nuint".to_string(), "usize".to_string())),
 
                 "i8" => Ok(("sbyte".to_string(), "i8".to_string())),
                 "i16" => Ok(("short".to_string(), "i16".to_string())),
@@ -549,12 +549,13 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
                 "i64" => Ok(("long".to_string(), "i64".to_string())),
                 "i128" => Ok(("System.Numerics.BigInteger".to_string(), "i128".to_string())),
                 // Use new C# 9 native integer type for size, as it should be the same.
-                "isize" => Ok(("nint".to_string(), "u128".to_string())),
+                "isize" => Ok(("nint".to_string(), "isize".to_string())),
 
                 "f32" => Ok(("float".to_string(), "f32".to_string())),
                 "f64" => Ok(("double".to_string(), "f64".to_string())),
 
                 "char" => Ok(("char".to_string(), "char".to_string())),
+                "c_char" => Ok(("char".to_string(), "c_char".to_string())),
 
                 "bool" => Err(Error::UnsupportedError("Found a boolean type. Due to differing sizes on different operating systems this is not supported for extern C functions.".to_string(),             v.ident.span()
                 )),
