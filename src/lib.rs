@@ -21,36 +21,38 @@
 //! ```
 //! use csharp_binder::{CSharpConfiguration, CSharpBuilder};
 //!
-//! let mut configuration = CSharpConfiguration::new();
-//! let rust_file = r#"
-//! /// Just a random return enum
-//! #[repr(u8)]
-//! enum ReturnEnum {
-//!     Val1,
-//!     Val2,
+//! fn main(){
+//!     let mut configuration = CSharpConfiguration::new();
+//!     let rust_file = r#"
+//!     /// Just a random return enum
+//!     #[repr(u8)]
+//!     enum ReturnEnum {
+//!         Val1,
+//!         Val2,
+//!     }
+//!     
+//!     /// An input struct we expect
+//!     #[repr(C)]
+//!     struct InputStruct {
+//!         field_a: u16,
+//!         /// This field is used for floats!
+//!         field_b: f64,
+//!     }
+//!     
+//!     pub extern "C" fn foo(a: InputStruct) -> ReturnEnum {
+//!     }
+//!     "#;
+//!     let mut builder = CSharpBuilder::new(rust_file, "foo", &mut configuration)
+//!                         .expect("Failed to parse file");
+//!     builder.set_namespace("MainNamespace");
+//!     builder.set_type("InsideClass");
+//!     let script = builder.build().expect("Failed to build");
 //! }
-//!
-//! /// An input struct we expect
-//! #[repr(C)]
-//! struct InputStruct {
-//!     field_a: u16,
-//!     /// This field is used for floats!
-//!     field_b: f64,
-//! }
-//!
-//! pub extern "C" fn foo(a: InputStruct) -> ReturnEnum {
-//! }
-//! "#;
-//! let mut builder = CSharpBuilder::new(rust_file, "foo", &mut configuration)
-//!                     .expect("Failed to parse file");
-//! builder.set_namespace("MainNamespace");
-//! builder.set_type("InsideClass");
-//! let script = builder.build().expect("Failed to build");
 //!```
 //!
 //! This would return the following C# code:
 //!
-//! ```csharp
+//! ```cs
 //! // Automatically generated, do not edit!
 //! using System;
 //! using System.Runtime.InteropServices;
