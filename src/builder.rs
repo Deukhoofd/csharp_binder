@@ -59,7 +59,7 @@ fn write_token(
 ) -> Result<(), Error> {
     match token {
         Item::Const(_) => {}
-        Item::Enum(en) => write_enum(str, indents, en)?,
+        Item::Enum(en) => write_enum(str, indents, en, builder)?,
         Item::ExternCrate(_) => {}
         Item::Fn(fun) => write_function(str, indents, builder, fun)?,
         Item::ForeignMod(_) => {}
@@ -79,7 +79,7 @@ fn write_token(
             }
         }
         Item::Static(_) => {}
-        Item::Struct(strct) => write_struct(str, indents, strct)?,
+        Item::Struct(strct) => write_struct(str, indents, strct, builder)?,
         Item::Trait(_) => {}
         Item::TraitAlias(_) => {}
         Item::Type(_) => {}
@@ -103,7 +103,7 @@ fn write_function(
 
     let return_type = match &fun.sig.output {
         ReturnType::Default => ("void".to_string(), "void".to_string()),
-        ReturnType::Type(_, t) => convert_type_name(t.borrow()).expect("No name found"),
+        ReturnType::Type(_, t) => convert_type_name(t.borrow(), builder)?,
     };
     let mut parameters: Vec<(String, String, String)> = Vec::new();
     for input in &fun.sig.inputs {
@@ -115,7 +115,7 @@ fn write_function(
             }
             FnArg::Typed(t) => match t.pat.borrow() {
                 Pat::Ident(i) => {
-                    let type_name = convert_type_name(t.ty.borrow())?;
+                    let type_name = convert_type_name(t.ty.borrow(), builder)?;
                     parameters.push((
                         convert_naming(&i.ident.to_string(), true),
                         type_name.0,
@@ -176,10 +176,17 @@ fn write_function(
         write!(str, "{} {}", parameter.1, parameter.0)?;
     }
     writeln!(str, ");")?;
+    writeln!(str)?;
+
     Ok(())
 }
 
-fn write_enum(str: &mut String, indents: &mut i32, en: &ItemEnum) -> Result<(), Error> {
+fn write_enum(
+    str: &mut String,
+    indents: &mut i32,
+    en: &ItemEnum,
+    builder: &CSharpBuilder,
+) -> Result<(), Error> {
     let mut size_option: Option<(String, String)> = None;
     for attr in &en.attrs {
         let repr_attr = get_repr_attribute_value(attr)?;
@@ -195,7 +202,7 @@ fn write_enum(str: &mut String, indents: &mut i32, en: &ItemEnum) -> Result<(), 
                                     "The size of a repr[C] enum is not specifically defined. Please use repr[u*] to define an actual size".to_string(),
                                 ))
                             }
-                            _ => size_option = Some(convert_type_path(&val)?),
+                            _ => size_option = Some(convert_type_path(&val, builder)?),
                         }
                     }
                 }
@@ -229,31 +236,38 @@ fn write_enum(str: &mut String, indents: &mut i32, en: &ItemEnum) -> Result<(), 
 
         let name = variant.ident.to_string();
         for _ in 0..*indents {
-            write!(str, "    ").ok();
+            write!(str, "    ")?;
         }
-        write!(str, "{}", name).ok();
+        write!(str, "{}", name)?;
         match &variant.discriminant {
             Some(v) => {
                 let expr = v.1.borrow();
                 if let Expr::Lit(l) = expr {
                     if let syn::Lit::Int(i) = &l.lit {
-                        write!(str, " = {}", i.base10_digits()).ok();
+                        write!(str, " = {}", i.base10_digits())?;
                     }
                 }
             }
             None => {}
         }
 
-        write!(str, ",").ok();
-        writeln!(str).ok();
+        write!(str, ",")?;
+        writeln!(str)?;
     }
-
     *indents -= 1;
     write_line(str, "}".to_string(), *indents)?;
+    writeln!(str)?;
+
+    builder.add_known_type(en.ident.to_string().as_str(), en.ident.to_string().as_str());
     Ok(())
 }
 
-fn write_struct(str: &mut String, indents: &mut i32, strct: &ItemStruct) -> Result<(), Error> {
+fn write_struct(
+    str: &mut String,
+    indents: &mut i32,
+    strct: &ItemStruct,
+    builder: &CSharpBuilder,
+) -> Result<(), Error> {
     let mut found_c_repr = false;
     for attr in &strct.attrs {
         let repr_attr = get_repr_attribute_value(attr)?;
@@ -290,7 +304,7 @@ fn write_struct(str: &mut String, indents: &mut i32, strct: &ItemStruct) -> Resu
 
     *indents += 1;
     for field in &strct.fields {
-        let t = convert_type_name(&field.ty)?;
+        let t = convert_type_name(&field.ty, builder)?;
         let outer_docs = extract_outer_docs(&field.attrs)?;
         write_summary_from_outer_docs(str, outer_docs, indents)?;
 
@@ -312,8 +326,13 @@ fn write_struct(str: &mut String, indents: &mut i32, strct: &ItemStruct) -> Resu
         }
     }
     *indents -= 1;
-
     write_line(str, "}".to_string(), *indents)?;
+    writeln!(str)?;
+
+    builder.add_known_type(
+        strct.ident.to_string().as_str(),
+        strct.ident.to_string().as_str(),
+    );
     Ok(())
 }
 
@@ -364,7 +383,7 @@ fn is_extern_c(func: &ItemFn) -> bool {
     }
 }
 
-fn convert_type_name(t: &syn::Type) -> Result<(String, String), Error> {
+fn convert_type_name(t: &syn::Type, builder: &CSharpBuilder) -> Result<(String, String), Error> {
     match t {
         Type::Array(_) => Err(Error::UnsupportedError(
             "Using rust arrays from ffi is not supported.".to_string(),
@@ -390,13 +409,13 @@ fn convert_type_name(t: &syn::Type) -> Result<(String, String), Error> {
         Type::Paren(_) => Err(Error::UnsupportedError(
             "Using rust parenthesis from ffi is not supported.".to_string(),
         )),
-        Type::Path(p) => convert_type_path(&p.path),
+        Type::Path(p) => convert_type_path(&p.path, builder),
         Type::Ptr(ptr) => {
-            let underlying = convert_type_name(ptr.elem.borrow())?;
+            let underlying = convert_type_name(ptr.elem.borrow(), builder)?;
             Ok(("IntPtr".to_string(), underlying.1 + "*"))
         }
         Type::Reference(r) => {
-            let underlying = convert_type_name(r.elem.borrow())?;
+            let underlying = convert_type_name(r.elem.borrow(), builder)?;
             Ok((
                 "ref ".to_string() + underlying.0.as_str(),
                 underlying.1 + "&",
@@ -466,7 +485,7 @@ fn get_repr_attribute_value(attr: &Attribute) -> Result<Option<syn::Path>, Error
     }
 }
 
-fn convert_type_path(path: &syn::Path) -> Result<(String, String), Error> {
+fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(String, String), Error> {
     if path.segments.len() == 1 {
         return match path.segments.last() {
             Some(v) => {
@@ -495,7 +514,9 @@ fn convert_type_path(path: &syn::Path) -> Result<(String, String), Error> {
                     "bool" => Err(Error::UnsupportedError("Found a boolean type. Due to differing sizes on different operating systems this is not supported for extern C functions.".to_string())),
                     "str" => Err(Error::UnsupportedError("Found a str type. This is not supported, please use a char pointer instead.".to_string())),
 
-                    _ => Ok((v.ident.to_string(), v.ident.to_string())),
+                    _ => {
+                        resolve_known_type_name(&builder, v)
+                    },
                 }
             }
             None => Err(Error::UnsupportedError(
@@ -504,8 +525,53 @@ fn convert_type_path(path: &syn::Path) -> Result<(String, String), Error> {
         };
     }
     Err(Error::UnsupportedError(
-        "Types without a path are not supported".to_string(),
+        "Types with a path longer than 1 are not supported, due to type resolving not really being a thing at the moment.".to_string(),
     ))
+}
+
+fn resolve_known_type_name(
+    builder: &&CSharpBuilder,
+    v: &syn::PathSegment,
+) -> Result<(String, String), Error> {
+    let conf = builder.configuration.borrow();
+    let t = conf.get_known_type(v.ident.to_string().as_str());
+    match t {
+        None => Err(Error::UnknownType(format!(
+            "Type with name '{}' was not found",
+            v.ident.to_string()
+        ))),
+        Some(t) => {
+            let inside_type = &builder.type_name;
+            if builder.namespace == t.namespace
+                && (*inside_type == t.inside_type || t.inside_type.is_none())
+            {
+                Ok((t.real_type_name.to_string(), v.ident.to_string()))
+            } else if builder.namespace == t.namespace {
+                Ok((
+                    t.inside_type.as_ref().unwrap().to_string()
+                        + "."
+                        + &*t.real_type_name.to_string(),
+                    v.ident.to_string(),
+                ))
+            } else if t.inside_type.is_none() {
+                Ok((
+                    t.namespace.as_ref().unwrap().to_string()
+                        + "."
+                        + &*t.real_type_name.to_string(),
+                    v.ident.to_string(),
+                ))
+            } else {
+                Ok((
+                    t.namespace.as_ref().unwrap().to_string()
+                        + "."
+                        + t.inside_type.as_ref().unwrap().to_string().as_str()
+                        + "."
+                        + t.real_type_name.to_string().as_str(),
+                    v.ident.to_string(),
+                ))
+            }
+        }
+    }
 }
 
 fn write_line(str: &mut String, content: String, indents: i32) -> Result<(), Error> {

@@ -1,12 +1,14 @@
-use crate::CSharpBuilder;
+use crate::{CSharpBuilder, CSharpConfiguration};
 
 #[test]
 fn create_builder() {
-    CSharpBuilder::new(r#"pub fn foo(){}"#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    CSharpBuilder::new(r#"pub fn foo(){}"#, "foo", &mut configuration).unwrap();
 }
 #[test]
 fn build_empty_with_namespace() {
-    let mut builder = CSharpBuilder::new(r#""#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
     builder.set_namespace("foo");
     let script = builder.build().unwrap();
     assert_eq!(script, "namespace foo\n{\n}\n")
@@ -14,7 +16,8 @@ fn build_empty_with_namespace() {
 
 #[test]
 fn build_empty_with_type() {
-    let mut builder = CSharpBuilder::new(r#""#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
     builder.set_type("foo");
     let script = builder.build().unwrap();
     assert_eq!(script, "internal static class foo\n{\n}\n")
@@ -22,7 +25,8 @@ fn build_empty_with_type() {
 
 #[test]
 fn build_empty_with_namespace_and_type() {
-    let mut builder = CSharpBuilder::new(r#""#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
     builder.set_namespace("foo");
     builder.set_type("bar");
     let script = builder.build().unwrap();
@@ -39,7 +43,9 @@ fn build_empty_with_namespace_and_type() {
 
 #[test]
 fn build_with_void_function() {
-    let mut builder = CSharpBuilder::new(r#"pub extern "C" fn foo(){}"#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder =
+        CSharpBuilder::new(r#"pub extern "C" fn foo(){}"#, "foo", &mut configuration).unwrap();
     builder.set_namespace("foo");
     builder.set_type("bar");
     let script = builder.build().unwrap();
@@ -52,6 +58,7 @@ fn build_with_void_function() {
         /// <returns>void</returns>
         [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
         internal static extern void Foo();
+
     }
 }\n"
     )
@@ -59,8 +66,13 @@ fn build_with_void_function() {
 
 #[test]
 fn build_with_longer_named_void_function() {
-    let mut builder =
-        CSharpBuilder::new(r#"pub extern "C" fn foo_bar_zet(foo_bar: u8){}"#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(
+        r#"pub extern "C" fn foo_bar_zet(foo_bar: u8){}"#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
     builder.set_namespace("foo");
     builder.set_type("bar");
     let script = builder.build().unwrap();
@@ -74,6 +86,7 @@ fn build_with_longer_named_void_function() {
         /// <returns>void</returns>
         [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo_bar_zet\")]
         internal static extern void FooBarZet(byte fooBar);
+
     }
 }\n"
         )
@@ -81,7 +94,13 @@ fn build_with_longer_named_void_function() {
 
 #[test]
 fn build_with_u8_function() {
-    let mut builder = CSharpBuilder::new(r#"pub extern "C" fn foo() -> u8 { 0 }"#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(
+        r#"pub extern "C" fn foo() -> u8 { 0 }"#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
     builder.set_namespace("foo");
     builder.set_type("bar");
     let script = builder.build().unwrap();
@@ -94,6 +113,7 @@ fn build_with_u8_function() {
         /// <returns>u8</returns>
         [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
         internal static extern byte Foo();
+
     }
 }\n"
     )
@@ -101,8 +121,13 @@ fn build_with_u8_function() {
 
 #[test]
 fn build_with_u8_ptr_function() {
-    let mut builder =
-        CSharpBuilder::new(r#"pub extern "C" fn foo() -> *const u8 { 0 }"#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(
+        r#"pub extern "C" fn foo() -> *const u8 { 0 }"#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
     builder.set_namespace("foo");
     builder.set_type("bar");
     let script = builder.build().unwrap();
@@ -115,6 +140,7 @@ fn build_with_u8_ptr_function() {
         /// <returns>u8*</returns>
         [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
         internal static extern IntPtr Foo();
+
     }
 }\n"
     )
@@ -122,8 +148,13 @@ fn build_with_u8_ptr_function() {
 
 #[test]
 fn build_with_void_function_with_parameters() {
-    let mut builder =
-        CSharpBuilder::new(r#"pub extern "C" fn foo(a: u8, b: u8) { }"#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(
+        r#"pub extern "C" fn foo(a: u8, b: u8) { }"#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
     builder.set_namespace("foo");
     builder.set_type("bar");
     let script = builder.build().unwrap();
@@ -138,6 +169,7 @@ fn build_with_void_function_with_parameters() {
         /// <returns>void</returns>
         [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
         internal static extern void Foo(byte a, byte b);
+
     }
 }\n"
     )
@@ -145,9 +177,11 @@ fn build_with_void_function_with_parameters() {
 
 #[test]
 fn build_with_void_function_with_pointer_parameters() {
+    let mut configuration = CSharpConfiguration::new();
     let mut builder = CSharpBuilder::new(
         r#"pub extern "C" fn foo(a: *const u8, b: *const u8) {  }"#,
         "foo",
+        &mut configuration,
     )
     .unwrap();
     builder.set_namespace("foo");
@@ -164,6 +198,7 @@ fn build_with_void_function_with_pointer_parameters() {
         /// <returns>void</returns>
         [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
         internal static extern void Foo(IntPtr a, IntPtr b);
+
     }
 }\n"
     )
@@ -171,11 +206,13 @@ fn build_with_void_function_with_pointer_parameters() {
 
 #[test]
 fn build_with_void_function_with_outer_doc_documentation() {
+    let mut configuration = CSharpConfiguration::new();
     let mut builder = CSharpBuilder::new(
         r#"
             /// test documentation
             pub extern "C" fn foo(a: *const u8, b: *const u8) {  }"#,
         "foo",
+        &mut configuration,
     )
     .unwrap();
     builder.set_namespace("foo");
@@ -195,6 +232,7 @@ fn build_with_void_function_with_outer_doc_documentation() {
         /// <returns>void</returns>
         [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
         internal static extern void Foo(IntPtr a, IntPtr b);
+
     }
 }\n"
     )
@@ -202,8 +240,13 @@ fn build_with_void_function_with_outer_doc_documentation() {
 
 #[test]
 fn build_void_function_inside_module() {
-    let mut builder =
-        CSharpBuilder::new(r#"mod foo_module { pub extern "C" fn foo(){} }"#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(
+        r#"mod foo_module { pub extern "C" fn foo(){} }"#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
     builder.set_namespace("foo");
     builder.set_type("bar");
     let script = builder.build().unwrap();
@@ -216,6 +259,7 @@ fn build_void_function_inside_module() {
         /// <returns>void</returns>
         [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
         internal static extern void Foo();
+
     }
 }\n"
     )
@@ -223,8 +267,13 @@ fn build_void_function_inside_module() {
 
 #[test]
 fn build_enum() {
-    let mut builder =
-        CSharpBuilder::new(r#"#[repr(u8)] enum Foo { One, Two, Three}"#, "foo").unwrap();
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(
+        r#"#[repr(u8)] enum Foo { One, Two, Three}"#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
     builder.set_namespace("foo");
     builder.set_type("bar");
     let script = builder.build().unwrap();
@@ -240,6 +289,7 @@ fn build_enum() {
             Two,
             Three,
         }
+
     }
 }\n"
     )
@@ -247,9 +297,11 @@ fn build_enum() {
 
 #[test]
 fn build_enum_with_values() {
+    let mut configuration = CSharpConfiguration::new();
     let mut builder = CSharpBuilder::new(
         r#"#[repr(u8)] enum Foo { One = 1, Two = 2, Five = 5}"#,
         "foo",
+        &mut configuration,
     )
     .unwrap();
     builder.set_namespace("foo");
@@ -267,6 +319,7 @@ fn build_enum_with_values() {
             Two = 2,
             Five = 5,
         }
+
     }
 }\n"
     )
@@ -274,11 +327,13 @@ fn build_enum_with_values() {
 
 #[test]
 fn build_enum_with_values_and_documentation() {
+    let mut configuration = CSharpConfiguration::new();
     let mut builder = CSharpBuilder::new(
         r#"#[repr(u8)] 
             /// testing documentation for enum
             enum Foo { One = 1, Two = 2, Five = 5}"#,
         "foo",
+        &mut configuration,
     )
     .unwrap();
     builder.set_namespace("foo");
@@ -299,6 +354,7 @@ fn build_enum_with_values_and_documentation() {
             Two = 2,
             Five = 5,
         }
+
     }
 }\n"
     )
@@ -306,6 +362,7 @@ fn build_enum_with_values_and_documentation() {
 
 #[test]
 fn build_enum_with_values_and_documentation_for_keys() {
+    let mut configuration = CSharpConfiguration::new();
     let mut builder = CSharpBuilder::new(
         r#"#[repr(u8)] 
             /// testing documentation for enum
@@ -318,6 +375,7 @@ fn build_enum_with_values_and_documentation_for_keys() {
                 Five = 5
             }"#,
         "foo",
+        &mut configuration,
     )
     .unwrap();
     builder.set_namespace("foo");
@@ -347,6 +405,7 @@ fn build_enum_with_values_and_documentation_for_keys() {
             /// </summary>
             Five = 5,
         }
+
     }
 }\n"
     )
@@ -354,6 +413,7 @@ fn build_enum_with_values_and_documentation_for_keys() {
 
 #[test]
 fn build_struct() {
+    let mut configuration = CSharpConfiguration::new();
     let mut builder = CSharpBuilder::new(
         r#"#[repr(C)] 
             struct Foo {
@@ -361,6 +421,7 @@ fn build_struct() {
                 field_b: u8,
             }"#,
         "foo",
+        &mut configuration,
     )
     .unwrap();
     builder.set_namespace("foo");
@@ -380,6 +441,7 @@ fn build_struct() {
             /// <remarks>u8</remarks>
             public readonly byte FieldB;
         }
+
     }
 }\n"
     )
@@ -387,6 +449,7 @@ fn build_struct() {
 
 #[test]
 fn build_struct_with_documentation() {
+    let mut configuration = CSharpConfiguration::new();
     let mut builder = CSharpBuilder::new(
         r#"#[repr(C)] 
             /// test documentation struct
@@ -397,6 +460,7 @@ fn build_struct_with_documentation() {
                 field_b: u8,
             }"#,
         "foo",
+        &mut configuration,
     )
     .unwrap();
     builder.set_namespace("foo");
@@ -425,7 +489,197 @@ fn build_struct_with_documentation() {
             /// <remarks>u8</remarks>
             public readonly byte FieldB;
         }
+
     }
 }\n"
     )
+}
+
+#[test]
+fn build_function_with_unknown_return_type() {
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(
+        r#"pub extern "C" fn foo() -> UnknownType {}"#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build();
+    assert!(script.is_err());
+}
+
+#[test]
+fn build_function_with_registered_enum_and_return_function_of_enum() {
+    let mut configuration = CSharpConfiguration::new();
+    let mut builder = CSharpBuilder::new(
+        r#"
+#[repr(u8)]
+enum KnownEnum{
+    Val1
+}
+
+pub extern "C" fn foo() -> KnownEnum {}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build();
+    assert!(!script.is_err());
+    assert_eq!(
+        script.unwrap(),
+        "namespace foo
+{
+    internal static class bar
+    {
+        public enum KnownEnum : byte
+        {
+            Val1,
+        }
+
+        /// <returns>KnownEnum</returns>
+        [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
+        internal static extern KnownEnum Foo();
+
+    }
+}\n"
+    );
+}
+
+#[test]
+fn build_function_with_registered_enum_from_earlier_build_without_type() {
+    let mut configuration = CSharpConfiguration::new();
+    let mut enum_builder = CSharpBuilder::new(
+        r#"
+#[repr(u8)]
+enum KnownEnum{
+    Val1
+}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    enum_builder.set_namespace("foo");
+    enum_builder.build().unwrap();
+
+    let mut builder = CSharpBuilder::new(
+        r#"
+pub extern "C" fn foo() -> KnownEnum {}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build();
+    assert!(!script.is_err());
+    assert_eq!(
+        script.unwrap(),
+        "namespace foo
+{
+    internal static class bar
+    {
+        /// <returns>KnownEnum</returns>
+        [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
+        internal static extern KnownEnum Foo();
+
+    }
+}\n"
+    );
+}
+
+#[test]
+fn build_function_with_registered_enum_from_earlier_build_in_different_type() {
+    let mut configuration = CSharpConfiguration::new();
+    let mut enum_builder = CSharpBuilder::new(
+        r#"
+#[repr(u8)]
+enum KnownEnum{
+    Val1
+}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    enum_builder.set_namespace("foo");
+    enum_builder.set_type("DiffType");
+    enum_builder.build().unwrap();
+
+    let mut builder = CSharpBuilder::new(
+        r#"
+pub extern "C" fn foo() -> KnownEnum {}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build();
+    assert!(!script.is_err());
+    assert_eq!(
+        script.unwrap(),
+        "namespace foo
+{
+    internal static class bar
+    {
+        /// <returns>KnownEnum</returns>
+        [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
+        internal static extern DiffType.KnownEnum Foo();
+
+    }
+}\n"
+    );
+}
+
+#[test]
+fn build_function_with_registered_enum_from_earlier_build_in_different_type_and_namespace() {
+    let mut configuration = CSharpConfiguration::new();
+    let mut enum_builder = CSharpBuilder::new(
+        r#"
+#[repr(u8)]
+enum KnownEnum{
+    Val1
+}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    enum_builder.set_namespace("DiffNameSpace.Test");
+    enum_builder.set_type("DiffType");
+    enum_builder.build().unwrap();
+
+    let mut builder = CSharpBuilder::new(
+        r#"
+pub extern "C" fn foo() -> KnownEnum {}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build();
+    assert!(!script.is_err());
+    assert_eq!(
+        script.unwrap(),
+        "namespace foo
+{
+    internal static class bar
+    {
+        /// <returns>KnownEnum</returns>
+        [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
+        internal static extern DiffNameSpace.Test.DiffType.KnownEnum Foo();
+
+    }
+}\n"
+    );
 }
