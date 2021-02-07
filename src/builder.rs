@@ -598,10 +598,21 @@ fn resolve_known_type_name(
                     v.ident.to_string(),
                 ))
             } else if t.inside_type.is_none() {
+                if t.namespace.is_none() {
+                    Ok((t.real_type_name.to_string(), v.ident.to_string()))
+                } else {
+                    Ok((
+                        t.namespace.as_ref().unwrap().to_string()
+                            + "."
+                            + &*t.real_type_name.to_string(),
+                        v.ident.to_string(),
+                    ))
+                }
+            } else if t.namespace.is_none() {
                 Ok((
-                    t.namespace.as_ref().unwrap().to_string()
+                    t.inside_type.as_ref().unwrap().to_string()
                         + "."
-                        + &*t.real_type_name.to_string(),
+                        + t.real_type_name.to_string().as_str(),
                     v.ident.to_string(),
                 ))
             } else {
