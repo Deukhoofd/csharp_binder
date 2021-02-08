@@ -94,7 +94,31 @@ fn write_token(
         Item::Struct(strct) => write_struct(str, indents, strct, builder)?,
         Item::Trait(_) => {}
         Item::TraitAlias(_) => {}
-        Item::Type(_) => {}
+        Item::Type(typedef) => {
+            let ty: &Type = typedef.ty.borrow();
+            if let Type::Path(type_path) = ty {
+                match type_path.path.get_ident() {
+                    None => {}
+                    Some(path) => {
+                        let mut conf = builder.configuration.borrow_mut();
+                        let t = conf.get_known_type(path.to_string().as_str());
+                        if t.is_none() {
+                            return Ok(());
+                        }
+                        let inner_type = t.unwrap();
+                        let namespace = inner_type.namespace.clone();
+                        let inside_type = inner_type.inside_type.clone();
+                        let real_type_name = inner_type.real_type_name.clone();
+                        conf.add_known_type(
+                            typedef.ident.to_string().as_str(),
+                            namespace,
+                            inside_type,
+                            real_type_name,
+                        )
+                    }
+                }
+            }
+        }
         Item::Union(_) => {}
         Item::Use(_) => {}
         Item::Verbatim(_) => {}

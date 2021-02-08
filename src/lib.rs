@@ -154,7 +154,7 @@ impl CSharpConfiguration {
     /// Sets a rust type to represent an out parameter in C#.
     ///
     /// This allows converting a parameter like ``foo: Out<u8>`` into ``out byte foo``.
-    /// Useful for following patterns such as: https://github.com/KodrAus/rust-csharp-ffi
+    /// Useful for following patterns such as: <https://github.com/KodrAus/rust-csharp-ffi>
     pub fn set_out_type(&mut self, rust_type_name: &str) {
         self.out_type = Some(rust_type_name.to_string());
     }

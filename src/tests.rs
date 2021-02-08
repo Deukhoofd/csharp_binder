@@ -585,7 +585,6 @@ fn build_function_with_unknown_return_type() {
     builder.set_type("bar");
     let script = builder.build();
     assert!(script.is_err());
-    println!("{}", script.unwrap_err().to_string())
 }
 
 #[test]
@@ -808,6 +807,52 @@ namespace foo
         /// <returns>void</returns>
         [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
         internal static extern void Foo(out byte p);
+
+    }
+}\n"
+    );
+}
+
+#[test]
+fn build_function_with_type_def_of_enum() {
+    let mut configuration = CSharpConfiguration::new(9);
+    let mut builder = CSharpBuilder::new(
+        r#"
+#[repr(u8)]
+enum KnownEnum{
+    Val1
+}
+
+type AnotherDefinition = KnownEnum;
+
+pub extern "C" fn foo() -> AnotherDefinition {}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build();
+    assert!(!script.is_err());
+    assert_eq!(
+        script.unwrap(),
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
+{
+    internal static class bar
+    {
+        public enum KnownEnum : byte
+        {
+            Val1,
+        }
+
+        /// <returns>AnotherDefinition</returns>
+        [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
+        internal static extern KnownEnum Foo();
 
     }
 }\n"
