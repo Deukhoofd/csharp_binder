@@ -1,5 +1,7 @@
 # csharp_binder
 
+![crates.io](https://img.shields.io/crates/v/csharp_binder.svg)
+
 CSharp_Binder is a tool written to generate C# bindings for a Rust FFI (Foreign Function Interface).
 By interacting over extern C functions, this allows you to easily call Rust functions from C#,
 without having to write the extern C# functions yourself.
@@ -22,32 +24,32 @@ Example:
 use csharp_binder::{CSharpConfiguration, CSharpBuilder};
 
 fn main(){
-    let mut configuration = CSharpConfiguration::new();
+    // Create C# configuration with C# target version 9.
+    let mut configuration = CSharpConfiguration::new(9);
     let rust_file = r#"
-/// Just a random return enum
-#[repr(u8)]
-enum ReturnEnum {
-    Val1,
-    Val2,
-}
+    /// Just a random return enum
+    #[repr(u8)]
+    enum ReturnEnum {
+        Val1,
+        Val2,
+    }
 
-/// An input struct we expect
-#[repr(C)]
-struct InputStruct {
-    field_a: u16,
-    /// This field is used for floats!
-    field_b: f64,
-}
+    /// An input struct we expect
+    #[repr(C)]
+    struct InputStruct {
+        field_a: u16,
+        /// This field is used for floats!
+        field_b: f64,
+    }
 
-pub extern "C" fn foo(a: InputStruct) -> ReturnEnum {
-}
-"#;
+    pub extern "C" fn foo(a: InputStruct) -> ReturnEnum {
+    }
+    "#;
     let mut builder = CSharpBuilder::new(rust_file, "foo", &mut configuration)
-        .expect("Failed to parse file");
+                        .expect("Failed to parse file");
     builder.set_namespace("MainNamespace");
     builder.set_type("InsideClass");
     let script = builder.build().expect("Failed to build");
-
 }
 ```
 
@@ -95,3 +97,5 @@ namespace MainNamespace
 }
 ```
 
+
+License: MIT
