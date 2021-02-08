@@ -1,6 +1,6 @@
 # csharp_binder
 
-![crates.io](https://img.shields.io/crates/v/csharp_binder.svg)
+[![crates.io](https://img.shields.io/crates/v/csharp_binder.svg)](https://crates.io/crates/csharp_binder)
 
 CSharp_Binder is a tool written to generate C# bindings for a Rust FFI (Foreign Function Interface).
 By interacting over extern C functions, this allows you to easily call Rust functions from C#,
