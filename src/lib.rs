@@ -22,7 +22,8 @@
 //! use csharp_binder::{CSharpConfiguration, CSharpBuilder};
 //!
 //! fn main(){
-//!     let mut configuration = CSharpConfiguration::new();
+//!     // Create C# configuration with C# target version 9.
+//!     let mut configuration = CSharpConfiguration::new(9);
 //!     let rust_file = r#"
 //!     /// Just a random return enum
 //!     #[repr(u8)]

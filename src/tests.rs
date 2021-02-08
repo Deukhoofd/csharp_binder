@@ -2,12 +2,12 @@ use crate::{CSharpBuilder, CSharpConfiguration};
 
 #[test]
 fn create_builder() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     CSharpBuilder::new(r#"pub fn foo(){}"#, "foo", &mut configuration).unwrap();
 }
 #[test]
 fn build_empty_with_namespace() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
     builder.set_namespace("foo");
     let script = builder.build().unwrap();
@@ -26,7 +26,7 @@ namespace foo
 
 #[test]
 fn build_empty_with_type() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
     builder.set_type("foo");
     let script = builder.build().unwrap();
@@ -42,7 +42,7 @@ internal static class foo\n{\n}\n"
 
 #[test]
 fn build_empty_with_namespace_and_type() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
     builder.set_namespace("foo");
     builder.set_type("bar");
@@ -64,7 +64,7 @@ namespace foo
 
 #[test]
 fn build_with_void_function() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder =
         CSharpBuilder::new(r#"pub extern "C" fn foo(){}"#, "foo", &mut configuration).unwrap();
     builder.set_namespace("foo");
@@ -91,7 +91,7 @@ namespace foo
 
 #[test]
 fn build_with_longer_named_void_function() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"pub extern "C" fn foo_bar_zet(foo_bar: u8){}"#,
         "foo",
@@ -123,7 +123,7 @@ namespace foo
 
 #[test]
 fn build_with_u8_function() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"pub extern "C" fn foo() -> u8 { 0 }"#,
         "foo",
@@ -154,7 +154,7 @@ namespace foo
 
 #[test]
 fn build_with_u8_ptr_function() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"pub extern "C" fn foo() -> *const u8 { 0 }"#,
         "foo",
@@ -185,7 +185,7 @@ namespace foo
 
 #[test]
 fn build_with_void_function_with_parameters() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"pub extern "C" fn foo(a: u8, b: u8) { }"#,
         "foo",
@@ -218,7 +218,7 @@ namespace foo
 
 #[test]
 fn build_with_void_function_with_pointer_parameters() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"pub extern "C" fn foo(a: *const u8, b: *const u8) {  }"#,
         "foo",
@@ -251,7 +251,7 @@ namespace foo
 
 #[test]
 fn build_with_void_function_with_outer_doc_documentation() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"
             /// test documentation
@@ -289,7 +289,7 @@ namespace foo
 
 #[test]
 fn build_void_function_inside_module() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"mod foo_module { pub extern "C" fn foo(){} }"#,
         "foo",
@@ -320,7 +320,7 @@ namespace foo
 
 #[test]
 fn build_enum() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"#[repr(u8)] enum Foo { One, Two, Three}"#,
         "foo",
@@ -354,7 +354,7 @@ namespace foo
 
 #[test]
 fn build_enum_with_values() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"#[repr(u8)] enum Foo { One = 1, Two = 2, Five = 5}"#,
         "foo",
@@ -388,7 +388,7 @@ namespace foo
 
 #[test]
 fn build_enum_with_values_and_documentation() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"#[repr(u8)] 
             /// testing documentation for enum
@@ -427,7 +427,7 @@ namespace foo
 
 #[test]
 fn build_enum_with_values_and_documentation_for_keys() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"#[repr(u8)] 
             /// testing documentation for enum
@@ -482,7 +482,7 @@ namespace foo
 
 #[test]
 fn build_struct() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"#[repr(C)] 
             struct Foo {
@@ -522,7 +522,7 @@ namespace foo
 
 #[test]
 fn build_struct_with_documentation() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"#[repr(C)] 
             /// test documentation struct
@@ -574,7 +574,7 @@ namespace foo
 
 #[test]
 fn build_function_with_unknown_return_type() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"pub extern "C" fn foo() -> UnknownType {}"#,
         "foo",
@@ -590,7 +590,7 @@ fn build_function_with_unknown_return_type() {
 
 #[test]
 fn build_function_with_registered_enum_and_return_function_of_enum() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut builder = CSharpBuilder::new(
         r#"
 #[repr(u8)]
@@ -634,7 +634,7 @@ namespace foo
 
 #[test]
 fn build_function_with_registered_enum_from_earlier_build_without_type() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut enum_builder = CSharpBuilder::new(
         r#"
 #[repr(u8)]
@@ -682,7 +682,7 @@ namespace foo
 
 #[test]
 fn build_function_with_registered_enum_from_earlier_build_in_different_type() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut enum_builder = CSharpBuilder::new(
         r#"
 #[repr(u8)]
@@ -731,7 +731,7 @@ namespace foo
 
 #[test]
 fn build_function_with_registered_enum_from_earlier_build_in_different_type_and_namespace() {
-    let mut configuration = CSharpConfiguration::new();
+    let mut configuration = CSharpConfiguration::new(9);
     let mut enum_builder = CSharpBuilder::new(
         r#"
 #[repr(u8)]
