@@ -522,13 +522,7 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
                 "Types with a path without identifier are not supported.".to_string(),
                 path.span(),
             )),
-            Some(identifier) => Err(Error::UnsupportedError(
-                format!(
-                    "Types with a path longer than 1 are not supported. At {}",
-                    identifier
-                ),
-                path.span(),
-            )),
+            Some(identifier) => resolve_known_type_name(&builder, identifier),
         };
     }
     return match path.segments.last() {
@@ -579,7 +573,7 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
 
                 // If the type is not a primitive type, attempt to resolve the type from our type database.
                 _ => {
-                    resolve_known_type_name(&builder, v)
+                    resolve_known_type_name(&builder, &v.ident)
                 },
             }
         }
@@ -592,37 +586,37 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
 
 fn resolve_known_type_name(
     builder: &&CSharpBuilder,
-    v: &syn::PathSegment,
+    v: &syn::Ident,
 ) -> Result<(String, String), Error> {
     let conf = builder.configuration.borrow();
-    let t = conf.get_known_type(v.ident.to_string().as_str());
+    let t = conf.get_known_type(v.to_string().as_str());
     match t {
         None => Err(Error::UnknownType(
-            format!("Type with name '{}' was not found", v.ident.to_string()),
-            v.ident.span(),
+            format!("Type with name '{}' was not found", v.to_string()),
+            v.span(),
         )),
         Some(t) => {
             let inside_type = &builder.type_name;
             if builder.namespace == t.namespace
                 && (*inside_type == t.inside_type || t.inside_type.is_none())
             {
-                Ok((t.real_type_name.to_string(), v.ident.to_string()))
+                Ok((t.real_type_name.to_string(), v.to_string()))
             } else if builder.namespace == t.namespace {
                 Ok((
                     t.inside_type.as_ref().unwrap().to_string()
                         + "."
                         + &*t.real_type_name.to_string(),
-                    v.ident.to_string(),
+                    v.to_string(),
                 ))
             } else if t.inside_type.is_none() {
                 if t.namespace.is_none() {
-                    Ok((t.real_type_name.to_string(), v.ident.to_string()))
+                    Ok((t.real_type_name.to_string(), v.to_string()))
                 } else {
                     Ok((
                         t.namespace.as_ref().unwrap().to_string()
                             + "."
                             + &*t.real_type_name.to_string(),
-                        v.ident.to_string(),
+                        v.to_string(),
                     ))
                 }
             } else if t.namespace.is_none() {
@@ -630,7 +624,7 @@ fn resolve_known_type_name(
                     t.inside_type.as_ref().unwrap().to_string()
                         + "."
                         + t.real_type_name.to_string().as_str(),
-                    v.ident.to_string(),
+                    v.to_string(),
                 ))
             } else {
                 Ok((
@@ -639,7 +633,7 @@ fn resolve_known_type_name(
                         + t.inside_type.as_ref().unwrap().to_string().as_str()
                         + "."
                         + t.real_type_name.to_string().as_str(),
-                    v.ident.to_string(),
+                    v.to_string(),
                 ))
             }
         }
