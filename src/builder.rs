@@ -3,8 +3,8 @@ use std::borrow::Borrow;
 use std::fmt::Write;
 use syn::spanned::Spanned;
 use syn::{
-    Attribute, Expr, FnArg, Item, ItemEnum, ItemFn, ItemStruct, Meta, NestedMeta, Pat, ReturnType,
-    Type,
+    Attribute, Expr, FnArg, GenericArgument, Item, ItemEnum, ItemFn, ItemStruct, Meta, NestedMeta,
+    Pat, PathArguments, ReturnType, Type,
 };
 
 pub fn parse_script(script: &str) -> syn::Result<syn::File> {
@@ -573,6 +573,10 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
 
                 // If the type is not a primitive type, attempt to resolve the type from our type database.
                 _ => {
+                    if builder.configuration.borrow().out_type.is_some() &&
+                        &v.ident.to_string() == builder.configuration.borrow().out_type.as_ref().unwrap() {
+                        return extract_out_parameter_type(v, builder);
+                    }
                     resolve_known_type_name(&builder, &v.ident)
                 },
             }
@@ -580,6 +584,31 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
         None => Err(Error::UnsupportedError(
             "Types without a path are not supported".to_string(),
             path.span(),
+        )),
+    };
+}
+
+fn extract_out_parameter_type(
+    v: &syn::PathSegment,
+    builder: &CSharpBuilder,
+) -> Result<(String, String), Error> {
+    return match &v.arguments {
+        PathArguments::AngleBracketed(a) => match a.args.last() {
+            Some(GenericArgument::Type(t)) => {
+                let inner_type = convert_type_name(t, builder)?;
+                Ok((
+                    "out ".to_string() + inner_type.0.as_str(),
+                    v.ident.to_string(),
+                ))
+            }
+            _ => Err(Error::UnsupportedError(
+                "Out type requires the real type to be angle bracketed.".to_string(),
+                v.ident.span(),
+            )),
+        },
+        _ => Err(Error::UnsupportedError(
+            "Out type requires the real type to be angle bracketed.".to_string(),
+            v.ident.span(),
         )),
     };
 }

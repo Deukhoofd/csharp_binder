@@ -777,3 +777,39 @@ namespace foo
 }\n"
     );
 }
+
+#[test]
+fn build_function_with_out_param() {
+    let mut configuration = CSharpConfiguration::new(9);
+    configuration.set_out_type("Out");
+
+    let mut builder = CSharpBuilder::new(
+        r#"
+pub extern "C" fn foo(p: Out<u8>) {}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build().expect("build failed");
+    assert_eq!(
+        script,
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
+{
+    internal static class bar
+    {
+        /// <param name=\"p\">Out</param>
+        /// <returns>void</returns>
+        [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
+        internal static extern void Foo(out byte p);
+
+    }
+}\n"
+    );
+}

@@ -116,6 +116,7 @@ pub(crate) struct CSharpType {
 pub struct CSharpConfiguration {
     known_types: HashMap<String, CSharpType>,
     csharp_version: u8,
+    out_type: Option<String>,
 }
 
 impl CSharpConfiguration {
@@ -124,6 +125,7 @@ impl CSharpConfiguration {
         Self {
             known_types: HashMap::new(),
             csharp_version,
+            out_type: None,
         }
     }
 
@@ -147,6 +149,14 @@ impl CSharpConfiguration {
                 real_type_name: csharp_type_name,
             },
         );
+    }
+
+    /// Sets a rust type to represent an out parameter in C#.
+    ///
+    /// This allows converting a parameter like ``foo: Out<u8>`` into ``out byte foo``.
+    /// Useful for following patterns such as: https://github.com/KodrAus/rust-csharp-ffi
+    pub fn set_out_type(&mut self, rust_type_name: &str) {
+        self.out_type = Some(rust_type_name.to_string());
     }
 
     pub(crate) fn get_known_type(&self, rust_type_name: &str) -> Option<&CSharpType> {
