@@ -117,6 +117,7 @@ pub struct CSharpConfiguration {
     known_types: HashMap<String, CSharpType>,
     csharp_version: u8,
     out_type: Option<String>,
+    generated_warning: String,
 }
 
 impl CSharpConfiguration {
@@ -126,6 +127,7 @@ impl CSharpConfiguration {
             known_types: HashMap::new(),
             csharp_version,
             out_type: None,
+            generated_warning: "Automatically generated, do not edit!".to_string(),
         }
     }
 
@@ -157,6 +159,13 @@ impl CSharpConfiguration {
     /// Useful for following patterns such as: <https://github.com/KodrAus/rust-csharp-ffi>
     pub fn set_out_type(&mut self, rust_type_name: &str) {
         self.out_type = Some(rust_type_name.to_string());
+    }
+
+    /// By default we add a warning on top of each generated C# script, which defaults to
+    /// ``// Automatically generated, do not edit!``. This functions allows you to modify this
+    /// warning. Can be multiline, and can be removed entirely by setting with an empty string.
+    pub fn set_generated_warning(&mut self, generated_warning: &str) {
+        self.generated_warning = generated_warning.to_string();
     }
 
     pub(crate) fn get_known_type(&self, rust_type_name: &str) -> Option<&CSharpType> {

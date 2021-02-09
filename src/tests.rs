@@ -858,3 +858,45 @@ namespace foo
 }\n"
     );
 }
+
+#[test]
+fn remove_top_warning() {
+    let mut configuration = CSharpConfiguration::new(9);
+    configuration.set_generated_warning("");
+    let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
+    builder.set_namespace("foo");
+    let script = builder.build().unwrap();
+    assert_eq!(
+        script,
+        "using System;
+using System.Runtime.InteropServices;
+
+namespace foo
+{
+}
+"
+    )
+}
+
+#[test]
+fn sets_multiline_top_warning() {
+    let mut configuration = CSharpConfiguration::new(9);
+    configuration.set_generated_warning("This should set\na warning\nacross multiple\nlines");
+    let mut builder = CSharpBuilder::new(r#""#, "foo", &mut configuration).unwrap();
+    builder.set_namespace("foo");
+    let script = builder.build().unwrap();
+    assert_eq!(
+        script,
+        "// This should set
+// a warning
+// across multiple
+// lines
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
+{
+}
+"
+    )
+}

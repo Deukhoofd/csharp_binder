@@ -15,11 +15,14 @@ pub fn build_csharp(builder: &CSharpBuilder) -> Result<String, Error> {
     let mut script: String = "".to_string();
     let mut indent = 0;
 
-    write_line(
-        &mut script,
-        "// Automatically generated, do not edit!".to_string(),
-        indent,
-    )?;
+    {
+        let generated_warning = &builder.configuration.borrow().generated_warning;
+        if !generated_warning.is_empty() {
+            for line in generated_warning.lines() {
+                write_line(&mut script, "// ".to_string() + line, indent)?;
+            }
+        }
+    }
     for using in &builder.usings {
         write_line(&mut script, format!("using {};", using), indent)?;
     }
