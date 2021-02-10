@@ -87,8 +87,6 @@ namespace MainNamespace
             /// <remarks>f64</remarks>
             public double FieldB { get; init; }
 
-            public InputStruct(){}
-
             public InputStruct(ushort fieldA, double fieldB)
             {
                 FieldA = fieldA;
