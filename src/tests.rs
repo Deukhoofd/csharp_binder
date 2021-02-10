@@ -481,8 +481,8 @@ namespace foo
 }
 
 #[test]
-fn build_struct() {
-    let mut configuration = CSharpConfiguration::new(9);
+fn build_struct_csharp_8() {
+    let mut configuration = CSharpConfiguration::new(8);
     let mut builder = CSharpBuilder::new(
         r#"#[repr(C)] 
             struct Foo {
@@ -513,6 +513,12 @@ namespace foo
             public readonly byte FieldA;
             /// <remarks>u8</remarks>
             public readonly byte FieldB;
+
+            public Foo(byte fieldA, byte fieldB)
+            {
+                FieldA = fieldA;
+                FieldB = fieldB;
+            }
         }
 
     }
@@ -521,8 +527,8 @@ namespace foo
 }
 
 #[test]
-fn build_struct_with_documentation() {
-    let mut configuration = CSharpConfiguration::new(9);
+fn build_struct_with_documentation_csharp_8() {
+    let mut configuration = CSharpConfiguration::new(8);
     let mut builder = CSharpBuilder::new(
         r#"#[repr(C)] 
             /// test documentation struct
@@ -565,6 +571,58 @@ namespace foo
             /// </summary>
             /// <remarks>u8</remarks>
             public readonly byte FieldB;
+
+            public Foo(byte fieldA, byte fieldB)
+            {
+                FieldA = fieldA;
+                FieldB = fieldB;
+            }
+        }
+
+    }
+}\n"
+    )
+}
+
+#[test]
+fn build_struct_csharp_9() {
+    let mut configuration = CSharpConfiguration::new(9);
+    let mut builder = CSharpBuilder::new(
+        r#"#[repr(C)] 
+            struct Foo {
+                field_a: u8,
+                field_b: u8,
+            }"#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build().unwrap();
+    assert_eq!(
+        script,
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
+{
+    internal static class bar
+    {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct Foo
+        {
+            /// <remarks>u8</remarks>
+            public byte FieldA { get; init; }
+            /// <remarks>u8</remarks>
+            public byte FieldB { get; init; }
+
+            public Foo(byte fieldA, byte fieldB)
+            {
+                FieldA = fieldA;
+                FieldB = fieldB;
+            }
         }
 
     }
@@ -898,5 +956,84 @@ namespace foo
 {
 }
 "
+    )
+}
+
+#[test]
+fn example_test() {
+    // Create C# configuration with C# target version 9.
+    let mut configuration = CSharpConfiguration::new(9);
+    let rust_file = r#"
+        /// Just a random return enum
+        #[repr(u8)]
+        enum ReturnEnum {
+            Val1,
+            Val2,
+        }
+        
+        /// An input struct we expect
+        #[repr(C)]
+        struct InputStruct {
+            field_a: u16,
+            /// This field is used for floats!
+            field_b: f64,
+        }
+        
+        pub extern "C" fn foo(a: InputStruct) -> ReturnEnum {
+        }
+        "#;
+    let mut builder =
+        CSharpBuilder::new(rust_file, "foo", &mut configuration).expect("Failed to parse file");
+    builder.set_namespace("MainNamespace");
+    builder.set_type("InsideClass");
+    let script = builder.build().expect("Failed to build");
+    assert_eq!(
+        script,
+        r#"// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace MainNamespace
+{
+    internal static class InsideClass
+    {
+        /// <summary>
+        /// Just a random return enum
+        /// </summary>
+        public enum ReturnEnum : byte
+        {
+            Val1,
+            Val2,
+        }
+
+        /// <summary>
+        /// An input struct we expect
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct InputStruct
+        {
+            /// <remarks>u16</remarks>
+            public ushort FieldA { get; init; }
+            /// <summary>
+            /// This field is used for floats!
+            /// </summary>
+            /// <remarks>f64</remarks>
+            public double FieldB { get; init; }
+
+            public InputStruct(ushort fieldA, double fieldB)
+            {
+                FieldA = fieldA;
+                FieldB = fieldB;
+            }
+        }
+
+        /// <param name="a">InputStruct</param>
+        /// <returns>ReturnEnum</returns>
+        [DllImport("foo", CallingConvention = CallingConvention.Cdecl, EntryPoint="foo")]
+        internal static extern ReturnEnum Foo(InputStruct a);
+
+    }
+}
+"#
     )
 }

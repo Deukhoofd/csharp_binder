@@ -346,6 +346,8 @@ fn write_struct(
     write_line(str, "{".to_string(), *indents)?;
 
     *indents += 1;
+    let mut converted_fields: Vec<(String, String)> = Vec::new();
+
     for field in &strct.fields {
         let t = convert_type_name(&field.ty, builder)?;
         let outer_docs = extract_outer_docs(&field.attrs)?;
@@ -356,18 +358,65 @@ fn write_struct(
         match &field.ident {
             None => {}
             Some(field_identifier) => {
-                write_line(
-                    str,
-                    format!(
-                        "public readonly {} {};",
-                        t.0,
-                        convert_naming(field_identifier.to_string().as_str(), false)
-                    ),
-                    *indents,
-                )?;
+                let csharp_field_name =
+                    convert_naming(field_identifier.to_string().as_str(), false);
+                // If C# version is 9 or newer, we make all fields { get; init; }, so they can be
+                // initialised, but are readonly afterwards. Otherwise we just make them readonly.
+                if builder.configuration.borrow().csharp_version >= 9 {
+                    write_line(
+                        str,
+                        format!("public {} {} {{ get; init; }}", t.0, csharp_field_name),
+                        *indents,
+                    )?;
+                } else {
+                    write_line(
+                        str,
+                        format!("public readonly {} {};", t.0, csharp_field_name),
+                        *indents,
+                    )?;
+                }
+                converted_fields.push((t.0, csharp_field_name));
             }
         }
     }
+
+    writeln!(str)?;
+
+    for _ in 0..*indents {
+        write!(str, "    ")?;
+    }
+    write!(str, "public {}(", strct.ident.to_string())?;
+    for (index, converted_field) in converted_fields.iter().enumerate() {
+        if index != 0 {
+            write!(str, ", ")?;
+        }
+
+        let mut parameter_name = converted_field.1.to_string();
+        if let Some(r) = parameter_name.get_mut(0..1) {
+            r.make_ascii_lowercase();
+        }
+
+        write!(str, "{} {}", converted_field.0, parameter_name)?;
+    }
+    writeln!(str, ")")?;
+    write_line(str, "{".to_string(), *indents)?;
+    *indents += 1;
+
+    for converted_field in converted_fields {
+        let mut parameter_name = converted_field.1.to_string();
+        if let Some(r) = parameter_name.get_mut(0..1) {
+            r.make_ascii_lowercase();
+        }
+        write_line(
+            str,
+            format!("{} = {};", converted_field.1, parameter_name),
+            *indents,
+        )?;
+    }
+    *indents -= 1;
+
+    write_line(str, "}".to_string(), *indents)?;
+
     *indents -= 1;
     write_line(str, "}".to_string(), *indents)?;
     writeln!(str)?;

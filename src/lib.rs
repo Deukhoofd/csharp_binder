@@ -78,12 +78,18 @@
 //!         public struct InputStruct
 //!         {
 //!             /// <remarks>u16</remarks>
-//!             public readonly ushort FieldA;
+//!             public ushort FieldA { get; init; }
 //!             /// <summary>
 //!             /// This field is used for floats!
 //!             /// </summary>
 //!             /// <remarks>f64</remarks>
-//!             public readonly double FieldB;
+//!             public double FieldB { get; init; }
+//!
+//!             public InputStruct(ushort fieldA, double fieldB)
+//!             {
+//!                 FieldA = fieldA;
+//!                 FieldB = fieldB;
+//!             }
 //!         }
 //!
 //!         /// <param name="a">InputStruct</param>
