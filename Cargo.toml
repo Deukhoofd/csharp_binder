@@ -1,6 +1,6 @@
 [package]
 name = "csharp_binder"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Deukhoofd <Deukhoofd@gmail.com>"]
 edition = "2018"
 license = "MIT"

@@ -514,6 +514,8 @@ namespace foo
             /// <remarks>u8</remarks>
             public readonly byte FieldB;
 
+            public Foo(){}
+
             public Foo(byte fieldA, byte fieldB)
             {
                 FieldA = fieldA;
@@ -572,6 +574,8 @@ namespace foo
             /// <remarks>u8</remarks>
             public readonly byte FieldB;
 
+            public Foo(){}
+
             public Foo(byte fieldA, byte fieldB)
             {
                 FieldA = fieldA;
@@ -617,6 +621,8 @@ namespace foo
             public byte FieldA { get; init; }
             /// <remarks>u8</remarks>
             public byte FieldB { get; init; }
+
+            public Foo(){}
 
             public Foo(byte fieldA, byte fieldB)
             {
@@ -1019,6 +1025,8 @@ namespace MainNamespace
             /// </summary>
             /// <remarks>f64</remarks>
             public double FieldB { get; init; }
+
+            public InputStruct(){}
 
             public InputStruct(ushort fieldA, double fieldB)
             {

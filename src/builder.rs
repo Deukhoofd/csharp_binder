@@ -382,6 +382,14 @@ fn write_struct(
 
     writeln!(str)?;
 
+    write_line(
+        str,
+        format!("public {}(){{}}", strct.ident.to_string()),
+        *indents,
+    )?;
+
+    writeln!(str)?;
+
     for _ in 0..*indents {
         write!(str, "    ")?;
     }
