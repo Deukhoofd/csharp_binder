@@ -1,6 +1,6 @@
-# csharp_binder
-
 [![crates.io](https://img.shields.io/crates/v/csharp_binder.svg)](https://crates.io/crates/csharp_binder)
+
+## CSharp_Binder
 
 CSharp_Binder is a tool written to generate C# bindings for a Rust FFI (Foreign Function Interface).
 By interacting over extern C functions, this allows you to easily call Rust functions from C#,
@@ -80,12 +80,18 @@ namespace MainNamespace
         public struct InputStruct
         {
             /// <remarks>u16</remarks>
-            public readonly ushort FieldA;
+            public ushort FieldA { get; init; }
             /// <summary>
             /// This field is used for floats!
             /// </summary>
             /// <remarks>f64</remarks>
-            public readonly double FieldB;
+            public double FieldB { get; init; }
+
+            public InputStruct(ushort fieldA, double fieldB)
+            {
+                FieldA = fieldA;
+                FieldB = fieldB;
+            }
         }
 
         /// <param name="a">InputStruct</param>
@@ -97,5 +103,3 @@ namespace MainNamespace
 }
 ```
 
-
-License: MIT
