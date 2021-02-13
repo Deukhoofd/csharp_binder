@@ -1,4 +1,4 @@
-use crate::{CSharpBuilder, CSharpType, Error};
+use crate::{CSharpBuilder, Error};
 use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::fmt::Write;
@@ -146,7 +146,27 @@ fn write_token(
                         let inner_type = t.unwrap();
                         let namespace = inner_type.namespace.clone();
                         let inside_type = inner_type.inside_type.clone();
-                        let real_type_name = inner_type.real_type_name.clone();
+                        let mut real_type_name = inner_type.real_type_name.clone();
+
+                        if let PathArguments::AngleBracketed(generics) =
+                            &type_path.path.segments.last().unwrap().arguments
+                        {
+                            write!(real_type_name, "<")?;
+                            for (index, generic) in generics.args.iter().enumerate() {
+                                if let GenericArgument::Type(t) = generic {
+                                    if index != 0 {
+                                        write!(real_type_name, ", ")?;
+                                    }
+                                    write!(
+                                        real_type_name,
+                                        "{}",
+                                        convert_type_name(t, builder)?.csharp_name
+                                    )?;
+                                }
+                            }
+                            write!(real_type_name, ">")?;
+                        }
+
                         conf.add_known_type(
                             typedef.ident.to_string().as_str(),
                             namespace,
