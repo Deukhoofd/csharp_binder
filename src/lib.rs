@@ -158,7 +158,6 @@ impl CSharpConfiguration {
             },
         );
     }
-
     /// Sets a rust type to represent an out parameter in C#.
     ///
     /// This allows converting a parameter like ``foo: Out<u8>`` into ``out byte foo``.

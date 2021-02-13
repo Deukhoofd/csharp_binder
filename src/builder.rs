@@ -1,11 +1,45 @@
-use crate::{CSharpBuilder, Error};
+use crate::{CSharpBuilder, CSharpType, Error};
 use std::borrow::Borrow;
+use std::collections::HashSet;
 use std::fmt::Write;
 use syn::spanned::Spanned;
 use syn::{
-    Attribute, Expr, FnArg, GenericArgument, Item, ItemEnum, ItemFn, ItemStruct, Meta, NestedMeta,
-    Pat, PathArguments, ReturnType, Type,
+    Attribute, Expr, FnArg, GenericArgument, GenericParam, Item, ItemEnum, ItemFn, ItemStruct,
+    Meta, NestedMeta, Pat, Path, PathArguments, ReturnType, Type,
 };
+
+struct TypeNameContainer {
+    csharp_name: String,
+    rust_name: String,
+    generics: Vec<TypeNameContainer>,
+}
+
+impl TypeNameContainer {
+    fn new(csharp_name: String, rust_name: String) -> TypeNameContainer {
+        TypeNameContainer {
+            csharp_name,
+            rust_name,
+            generics: Vec::new(),
+        }
+    }
+
+    fn stringify(&self) -> Result<String, Error> {
+        let mut s = self.csharp_name.to_string();
+        if !self.generics.is_empty() {
+            write!(s, "<")?;
+
+            for (index, generic) in self.generics.iter().enumerate() {
+                if index != 0 {
+                    write!(s, ", ")?;
+                }
+                write!(s, "{}", generic.stringify()?)?;
+            }
+
+            write!(s, ">")?;
+        }
+        Ok(s)
+    }
+}
 
 pub fn parse_script(script: &str) -> syn::Result<syn::File> {
     syn::parse_str(script)
@@ -100,11 +134,12 @@ fn write_token(
         Item::Type(typedef) => {
             let ty: &Type = typedef.ty.borrow();
             if let Type::Path(type_path) = ty {
-                match type_path.path.get_ident() {
+                let type_name_opt = get_path_name(&type_path.path);
+                match type_name_opt {
                     None => {}
-                    Some(path) => {
+                    Some(type_name) => {
                         let mut conf = builder.configuration.borrow_mut();
-                        let t = conf.get_known_type(path.to_string().as_str());
+                        let t = conf.get_known_type(type_name.as_str());
                         if t.is_none() {
                             return Ok(());
                         }
@@ -130,6 +165,10 @@ fn write_token(
     Ok(())
 }
 
+fn get_path_name(path: &Path) -> Option<String> {
+    Some(path.segments.last()?.ident.to_string())
+}
+
 fn write_function(
     str: &mut String,
     indents: &mut i32,
@@ -141,7 +180,7 @@ fn write_function(
     }
 
     let return_type = match &fun.sig.output {
-        ReturnType::Default => ("void".to_string(), "void".to_string()),
+        ReturnType::Default => TypeNameContainer::new("void".to_string(), "void".to_string()),
         ReturnType::Type(_, t) => convert_type_name(t.borrow(), builder)?,
     };
     let mut parameters: Vec<(String, String, String)> = Vec::new();
@@ -158,8 +197,8 @@ fn write_function(
                     let type_name = convert_type_name(t.ty.borrow(), builder)?;
                     parameters.push((
                         convert_naming(&i.ident.to_string(), true),
-                        type_name.0,
-                        type_name.1,
+                        type_name.stringify()?,
+                        type_name.rust_name,
                     ));
                 }
                 _ => {
@@ -187,7 +226,7 @@ fn write_function(
     }
     write_line(
         str,
-        format!("/// <returns>{}</returns>", return_type.1),
+        format!("/// <returns>{}</returns>", return_type.rust_name),
         *indents,
     )?;
     write_line(
@@ -206,7 +245,7 @@ fn write_function(
     write!(
         str,
         "internal static extern {} {}(",
-        return_type.0,
+        return_type.stringify()?,
         convert_naming(&fun.sig.ident.to_string(), false)
     )?;
 
@@ -228,7 +267,7 @@ fn write_enum(
     en: &ItemEnum,
     builder: &CSharpBuilder,
 ) -> Result<(), Error> {
-    let mut size_option: Option<(String, String)> = None;
+    let mut size_option: Option<TypeNameContainer> = None;
     for attr in &en.attrs {
         let repr_attr = get_repr_attribute_value(attr)?;
         match repr_attr {
@@ -251,7 +290,7 @@ fn write_enum(
             }
         }
     }
-    if size_option == None {
+    if size_option.is_none() {
         return Ok(());
     }
     let size = size_option.expect("");
@@ -260,7 +299,11 @@ fn write_enum(
     write_summary_from_outer_docs(str, outer_docs, indents)?;
     write_line(
         str,
-        format!("public enum {} : {}", en.ident.to_string(), size.0),
+        format!(
+            "public enum {} : {}",
+            en.ident.to_string(),
+            size.csharp_name
+        ),
         *indents,
     )?;
     write_line(str, "{".to_string(), *indents)?;
@@ -338,22 +381,67 @@ fn write_struct(
         "[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]".to_string(),
         *indents,
     )?;
-    write_line(
-        str,
-        format!("public struct {}", strct.ident.to_string()),
-        *indents,
-    )?;
+
+    for _ in 0..*indents {
+        write!(str, "    ")?;
+    }
+    write!(str, "public struct {}", strct.ident.to_string())?;
+
+    let mut generics: HashSet<String> = HashSet::new();
+    for param in &strct.generics.params {
+        match param {
+            GenericParam::Type(type_param) => {
+                generics.insert(type_param.ident.to_string());
+            }
+            GenericParam::Lifetime(_) => {}
+            GenericParam::Const(_) => {}
+        }
+    }
+
+    if !generics.is_empty() {
+        write!(str, "<")?;
+
+        for (index, generic) in generics.iter().enumerate() {
+            if index != 0 {
+                write!(str, ", ")?;
+            }
+            write!(str, "{}", generic)?;
+        }
+
+        write!(str, ">")?;
+    }
+
+    writeln!(str)?;
     write_line(str, "{".to_string(), *indents)?;
 
     *indents += 1;
     let mut converted_fields: Vec<(String, String)> = Vec::new();
 
     for field in &strct.fields {
-        let t = convert_type_name(&field.ty, builder)?;
+        let mut generic_t = None;
+        if let Type::Path(p) = &field.ty {
+            match p.path.get_ident() {
+                None => {}
+                Some(ident) => {
+                    if generics.contains(ident.to_string().as_str()) {
+                        generic_t = Some(ident.to_string())
+                    }
+                }
+            }
+        }
+
+        let t = match generic_t {
+            None => convert_type_name(&field.ty, builder)?,
+            Some(v) => TypeNameContainer::new(v.to_string(), v),
+        };
         let outer_docs = extract_outer_docs(&field.attrs)?;
         write_summary_from_outer_docs(str, outer_docs, indents)?;
 
-        write_line(str, format!("/// <remarks>{}</remarks>", t.1), *indents)?;
+        write_line(
+            str,
+            format!("/// <remarks>{}</remarks>", t.rust_name),
+            *indents,
+        )?;
 
         match &field.ident {
             None => {}
@@ -365,17 +453,21 @@ fn write_struct(
                 if builder.configuration.borrow().csharp_version >= 9 {
                     write_line(
                         str,
-                        format!("public {} {} {{ get; init; }}", t.0, csharp_field_name),
+                        format!(
+                            "public {} {} {{ get; init; }}",
+                            t.stringify()?,
+                            csharp_field_name
+                        ),
                         *indents,
                     )?;
                 } else {
                     write_line(
                         str,
-                        format!("public readonly {} {};", t.0, csharp_field_name),
+                        format!("public readonly {} {};", t.stringify()?, csharp_field_name),
                         *indents,
                     )?;
                 }
-                converted_fields.push((t.0, csharp_field_name));
+                converted_fields.push((t.stringify()?, csharp_field_name));
             }
         }
     }
@@ -475,7 +567,7 @@ fn is_extern_c(func: &ItemFn) -> bool {
     }
 }
 
-fn convert_type_name(t: &syn::Type, builder: &CSharpBuilder) -> Result<(String, String), Error> {
+fn convert_type_name(t: &syn::Type, builder: &CSharpBuilder) -> Result<TypeNameContainer, Error> {
     match t {
         Type::Array(_) => Err(Error::UnsupportedError(
             "Using rust arrays from ffi is not supported.".to_string(),
@@ -512,13 +604,13 @@ fn convert_type_name(t: &syn::Type, builder: &CSharpBuilder) -> Result<(String, 
         Type::Path(p) => convert_type_path(&p.path, builder),
         Type::Ptr(ptr) => {
             let underlying = convert_type_name(ptr.elem.borrow(), builder)?;
-            Ok(("IntPtr".to_string(), underlying.1 + "*"))
+            Ok(TypeNameContainer::new("IntPtr".to_string(), underlying.rust_name + "*"))
         }
         Type::Reference(r) => {
             let underlying = convert_type_name(r.elem.borrow(), builder)?;
-            Ok((
-                "ref ".to_string() + underlying.0.as_str(),
-                underlying.1 + "&",
+            Ok(TypeNameContainer::new(
+                "ref ".to_string() + underlying.stringify()?.as_str(),
+                underlying.rust_name + "&",
             ))
         }
         Type::Slice(_) => Err(Error::UnsupportedError(
@@ -591,57 +683,51 @@ fn get_repr_attribute_value(attr: &Attribute) -> Result<Option<syn::Path>, Error
     }
 }
 
-fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(String, String), Error> {
-    if path.segments.len() != 1 {
-        return match path.get_ident() {
-            None => Err(Error::UnsupportedError(
-                "Types with a path without identifier are not supported.".to_string(),
-                path.span(),
-            )),
-            Some(identifier) => resolve_known_type_name(&builder, identifier),
-        };
-    }
+fn convert_type_path(
+    path: &syn::Path,
+    builder: &CSharpBuilder,
+) -> Result<TypeNameContainer, Error> {
     return match path.segments.last() {
         Some(v) => {
             match v.ident.to_string().as_str() {
                 // First attempt to resolve the primitive types
-                "u8" => Ok(("byte".to_string(), "u8".to_string())),
-                "u16" => Ok(("ushort".to_string(), "u16".to_string())),
-                "u32" => Ok(("uint".to_string(), "u32".to_string())),
-                "u64" => Ok(("ulong".to_string(), "u64".to_string())),
-                "u128" => Ok(("System.Numerics.BigInteger".to_string(), "u128".to_string())),
+                "u8" => Ok(TypeNameContainer::new("byte".to_string(), "u8".to_string())),
+                "u16" => Ok(TypeNameContainer::new("ushort".to_string(), "u16".to_string())),
+                "u32" => Ok(TypeNameContainer::new("uint".to_string(), "u32".to_string())),
+                "u64" => Ok(TypeNameContainer::new("ulong".to_string(), "u64".to_string())),
+                "u128" => Ok(TypeNameContainer::new("System.Numerics.BigInteger".to_string(), "u128".to_string())),
                 "usize" => {
                     if builder.configuration.borrow().csharp_version >= 9 {
                         // Use new C# 9 native integer type for size, as it should be the same.
-                        Ok(("nuint".to_string(), "usize".to_string()))
+                        Ok(TypeNameContainer::new("nuint".to_string(), "usize".to_string()))
                     }
                     else{
                         // FIXME: Not strictly correct on 32 bit computers. 
-                        Ok(("ulong".to_string(), "usize".to_string()))
+                        Ok(TypeNameContainer::new("ulong".to_string(), "usize".to_string()))
                     }
                 },
 
-                "i8" => Ok(("sbyte".to_string(), "i8".to_string())),
-                "i16" => Ok(("short".to_string(), "i16".to_string())),
-                "i32" => Ok(("int".to_string(), "i32".to_string())),
-                "i64" => Ok(("long".to_string(), "i64".to_string())),
-                "i128" => Ok(("System.Numerics.BigInteger".to_string(), "i128".to_string())),
+                "i8" => Ok(TypeNameContainer::new("sbyte".to_string(), "i8".to_string())),
+                "i16" => Ok(TypeNameContainer::new("short".to_string(), "i16".to_string())),
+                "i32" => Ok(TypeNameContainer::new("int".to_string(), "i32".to_string())),
+                "i64" => Ok(TypeNameContainer::new("long".to_string(), "i64".to_string())),
+                "i128" => Ok(TypeNameContainer::new("System.Numerics.BigInteger".to_string(), "i128".to_string())),
                 "isize" => {
                     if builder.configuration.borrow().csharp_version >= 9 {
                         // Use new C# 9 native integer type for size, as it should be the same.
-                        Ok(("nint".to_string(), "isize".to_string()))
+                        Ok(TypeNameContainer::new("nint".to_string(), "isize".to_string()))
                     }
                     else{
                         // FIXME: Not strictly correct on 32 bit computers. 
-                        Ok(("long".to_string(), "isize".to_string()))
+                        Ok(TypeNameContainer::new("long".to_string(), "isize".to_string()))
                     }
                 },
 
-                "f32" => Ok(("float".to_string(), "f32".to_string())),
-                "f64" => Ok(("double".to_string(), "f64".to_string())),
+                "f32" => Ok(TypeNameContainer::new("float".to_string(), "f32".to_string())),
+                "f64" => Ok(TypeNameContainer::new("double".to_string(), "f64".to_string())),
 
-                "char" => Ok(("char".to_string(), "char".to_string())),
-                "c_char" => Ok(("char".to_string(), "c_char".to_string())),
+                "char" => Ok(TypeNameContainer::new("char".to_string(), "char".to_string())),
+                "c_char" => Ok(TypeNameContainer::new("char".to_string(), "c_char".to_string())),
 
                 "bool" => Err(Error::UnsupportedError("Found a boolean type. Due to differing sizes on different operating systems this is not supported for extern C functions.".to_string(),             v.ident.span()
                 )),
@@ -653,7 +739,16 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
                         &v.ident.to_string() == builder.configuration.borrow().out_type.as_ref().unwrap() {
                         return extract_out_parameter_type(v, builder);
                     }
-                    resolve_known_type_name(&builder, &v.ident)
+                    let mut base = resolve_known_type_name(&builder, &v.ident)?;
+                    if let PathArguments::AngleBracketed(generics) = &v.arguments {
+                        for generic in &generics.args {
+                            if let GenericArgument::Type(gen) = generic {
+                                base.generics.push(convert_type_name(gen, builder)?)
+                            }
+                        }
+                    }
+
+                    Ok(base)
                 },
             }
         }
@@ -667,13 +762,13 @@ fn convert_type_path(path: &syn::Path, builder: &CSharpBuilder) -> Result<(Strin
 fn extract_out_parameter_type(
     v: &syn::PathSegment,
     builder: &CSharpBuilder,
-) -> Result<(String, String), Error> {
+) -> Result<TypeNameContainer, Error> {
     return match &v.arguments {
         PathArguments::AngleBracketed(a) => match a.args.last() {
             Some(GenericArgument::Type(t)) => {
                 let inner_type = convert_type_name(t, builder)?;
-                Ok((
-                    "out ".to_string() + inner_type.0.as_str(),
+                Ok(TypeNameContainer::new(
+                    "out ".to_string() + inner_type.stringify()?.as_str(),
                     v.ident.to_string(),
                 ))
             }
@@ -690,9 +785,9 @@ fn extract_out_parameter_type(
 }
 
 fn resolve_known_type_name(
-    builder: &&CSharpBuilder,
+    builder: &CSharpBuilder,
     v: &syn::Ident,
-) -> Result<(String, String), Error> {
+) -> Result<TypeNameContainer, Error> {
     let conf = builder.configuration.borrow();
     let t = conf.get_known_type(v.to_string().as_str());
     match t {
@@ -705,9 +800,12 @@ fn resolve_known_type_name(
             if builder.namespace == t.namespace
                 && (*inside_type == t.inside_type || t.inside_type.is_none())
             {
-                Ok((t.real_type_name.to_string(), v.to_string()))
+                Ok(TypeNameContainer::new(
+                    t.real_type_name.to_string(),
+                    v.to_string(),
+                ))
             } else if builder.namespace == t.namespace {
-                Ok((
+                Ok(TypeNameContainer::new(
                     t.inside_type.as_ref().unwrap().to_string()
                         + "."
                         + &*t.real_type_name.to_string(),
@@ -715,9 +813,12 @@ fn resolve_known_type_name(
                 ))
             } else if t.inside_type.is_none() {
                 if t.namespace.is_none() {
-                    Ok((t.real_type_name.to_string(), v.to_string()))
+                    Ok(TypeNameContainer::new(
+                        t.real_type_name.to_string(),
+                        v.to_string(),
+                    ))
                 } else {
-                    Ok((
+                    Ok(TypeNameContainer::new(
                         t.namespace.as_ref().unwrap().to_string()
                             + "."
                             + &*t.real_type_name.to_string(),
@@ -725,14 +826,14 @@ fn resolve_known_type_name(
                     ))
                 }
             } else if t.namespace.is_none() {
-                Ok((
+                Ok(TypeNameContainer::new(
                     t.inside_type.as_ref().unwrap().to_string()
                         + "."
                         + t.real_type_name.to_string().as_str(),
                     v.to_string(),
                 ))
             } else {
-                Ok((
+                Ok(TypeNameContainer::new(
                     t.namespace.as_ref().unwrap().to_string()
                         + "."
                         + t.inside_type.as_ref().unwrap().to_string().as_str()

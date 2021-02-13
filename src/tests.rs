@@ -918,6 +918,109 @@ namespace foo
 }
 
 #[test]
+fn build_function_with_generic_struct() {
+    let mut configuration = CSharpConfiguration::new(9);
+    let mut builder = CSharpBuilder::new(
+        r#"
+#[repr(C)]
+struct TestStruct<T> {
+    value: T,
+}
+
+pub extern "C" fn foo(par: TestStruct<u16>) -> TestStruct<u8> {}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build();
+    assert_eq!(
+        script.expect("build failed"),
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
+{
+    internal static class bar
+    {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct TestStruct<T>
+        {
+            /// <remarks>T</remarks>
+            public T Value { get; init; }
+
+            public TestStruct(T value)
+            {
+                Value = value;
+            }
+        }
+
+        /// <param name=\"par\">TestStruct</param>
+        /// <returns>TestStruct</returns>
+        [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
+        internal static extern TestStruct<byte> Foo(TestStruct<ushort> par);
+
+    }
+}\n"
+    );
+}
+
+#[test]
+fn build_function_with_generic_struct_type_definition() {
+    let mut configuration = CSharpConfiguration::new(9);
+    let mut builder = CSharpBuilder::new(
+        r#"
+#[repr(C)]
+struct TestStruct<T> {
+    value: T,
+}
+
+type Redefinition = TestStruct<u8>;
+
+pub extern "C" fn foo() -> Redefinition {}
+        "#,
+        "foo",
+        &mut configuration,
+    )
+    .unwrap();
+    builder.set_namespace("foo");
+    builder.set_type("bar");
+    let script = builder.build();
+    assert_eq!(
+        script.expect("build failed"),
+        "// Automatically generated, do not edit!
+using System;
+using System.Runtime.InteropServices;
+
+namespace foo
+{
+    internal static class bar
+    {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct TestStruct<T>
+        {
+            /// <remarks>T</remarks>
+            public T Value { get; init; }
+
+            public TestStruct(T value)
+            {
+                Value = value;
+            }
+        }
+
+        /// <returns>Redefinition</returns>
+        [DllImport(\"foo\", CallingConvention = CallingConvention.Cdecl, EntryPoint=\"foo\")]
+        internal static extern TestStruct<byte> Foo();
+
+    }
+}\n"
+    );
+}
+
+#[test]
 fn remove_top_warning() {
     let mut configuration = CSharpConfiguration::new(9);
     configuration.set_generated_warning("");
