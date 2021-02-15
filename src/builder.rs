@@ -755,8 +755,9 @@ fn convert_type_path(
 
                 // If the type is not a primitive type, attempt to resolve the type from our type database.
                 _ => {
-                    if builder.configuration.borrow().out_type.is_some() &&
-                        &v.ident.to_string() == builder.configuration.borrow().out_type.as_ref().unwrap() {
+                    let out_type = &builder.configuration.borrow().out_type;
+                    if out_type.is_some() &&
+                        &v.ident.to_string() == out_type.as_ref().unwrap() {
                         return extract_out_parameter_type(v, builder);
                     }
                     let mut base = resolve_known_type_name(&builder, &v.ident)?;
