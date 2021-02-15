@@ -45,12 +45,12 @@ pub fn parse_script(script: &str) -> syn::Result<syn::File> {
     syn::parse_str(script)
 }
 
-pub fn build_csharp(builder: &CSharpBuilder) -> Result<String, Error> {
+pub fn build_csharp(builder: &mut CSharpBuilder) -> Result<String, Error> {
     let mut script: String = "".to_string();
     let mut indent = 0;
 
     {
-        let generated_warning = &builder.configuration.borrow().generated_warning;
+        let generated_warning = &builder.configuration.generated_warning;
         if !generated_warning.is_empty() {
             for line in generated_warning.lines() {
                 write_line(&mut script, "// ".to_string() + line, indent)?;
@@ -79,7 +79,8 @@ pub fn build_csharp(builder: &CSharpBuilder) -> Result<String, Error> {
         }
     }
 
-    for token in &builder.tokens.items {
+    let tokens = builder.tokens.items.clone();
+    for token in &tokens {
         write_token(&mut script, token, &mut indent, builder)?;
     }
 
@@ -104,7 +105,7 @@ fn write_token(
     str: &mut String,
     token: &Item,
     indents: &mut i32,
-    builder: &CSharpBuilder,
+    builder: &mut CSharpBuilder<'_>,
 ) -> Result<(), Error> {
     match token {
         Item::Const(_) => {}
@@ -138,8 +139,7 @@ fn write_token(
                 match type_name_opt {
                     None => {}
                     Some(type_name) => {
-                        let mut conf = builder.configuration.borrow_mut();
-                        let t = conf.get_known_type(type_name.as_str());
+                        let t = builder.configuration.get_known_type(type_name.as_str());
                         if t.is_none() {
                             return Ok(());
                         }
@@ -167,7 +167,7 @@ fn write_token(
                             write!(real_type_name, ">")?;
                         }
 
-                        conf.add_known_type(
+                        builder.configuration.add_known_type(
                             typedef.ident.to_string().as_str(),
                             namespace,
                             inside_type,
@@ -285,7 +285,7 @@ fn write_enum(
     str: &mut String,
     indents: &mut i32,
     en: &ItemEnum,
-    builder: &CSharpBuilder,
+    builder: &mut CSharpBuilder<'_>,
 ) -> Result<(), Error> {
     let mut size_option: Option<TypeNameContainer> = None;
     for attr in &en.attrs {
@@ -372,7 +372,7 @@ fn write_struct(
     str: &mut String,
     indents: &mut i32,
     strct: &ItemStruct,
-    builder: &CSharpBuilder,
+    builder: &mut CSharpBuilder<'_>,
 ) -> Result<(), Error> {
     let mut found_c_repr = false;
     for attr in &strct.attrs {
@@ -470,7 +470,7 @@ fn write_struct(
                     convert_naming(field_identifier.to_string().as_str(), false);
                 // If C# version is 9 or newer, we make all fields { get; init; }, so they can be
                 // initialised, but are readonly afterwards. Otherwise we just make them readonly.
-                if builder.configuration.borrow().csharp_version >= 9 {
+                if builder.configuration.csharp_version >= 9 {
                     write_line(
                         str,
                         format!(
@@ -717,7 +717,7 @@ fn convert_type_path(
                 "u64" => Ok(TypeNameContainer::new("ulong".to_string(), "u64".to_string())),
                 "u128" => Ok(TypeNameContainer::new("System.Numerics.BigInteger".to_string(), "u128".to_string())),
                 "usize" => {
-                    if builder.configuration.borrow().csharp_version >= 9 {
+                    if builder.configuration.csharp_version >= 9 {
                         // Use new C# 9 native integer type for size, as it should be the same.
                         Ok(TypeNameContainer::new("nuint".to_string(), "usize".to_string()))
                     }
@@ -733,7 +733,7 @@ fn convert_type_path(
                 "i64" => Ok(TypeNameContainer::new("long".to_string(), "i64".to_string())),
                 "i128" => Ok(TypeNameContainer::new("System.Numerics.BigInteger".to_string(), "i128".to_string())),
                 "isize" => {
-                    if builder.configuration.borrow().csharp_version >= 9 {
+                    if builder.configuration.csharp_version >= 9 {
                         // Use new C# 9 native integer type for size, as it should be the same.
                         Ok(TypeNameContainer::new("nint".to_string(), "isize".to_string()))
                     }
@@ -755,7 +755,7 @@ fn convert_type_path(
 
                 // If the type is not a primitive type, attempt to resolve the type from our type database.
                 _ => {
-                    let out_type = &builder.configuration.borrow().out_type;
+                    let out_type = &builder.configuration.out_type;
                     if out_type.is_some() &&
                         &v.ident.to_string() == out_type.as_ref().unwrap() {
                         return extract_out_parameter_type(v, builder);
@@ -809,7 +809,7 @@ fn resolve_known_type_name(
     builder: &CSharpBuilder,
     v: &syn::Ident,
 ) -> Result<TypeNameContainer, Error> {
-    let conf = builder.configuration.borrow();
+    let conf = &builder.configuration;
     let t = conf.get_known_type(v.to_string().as_str());
     match t {
         None => Err(Error::UnknownType(

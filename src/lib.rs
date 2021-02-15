@@ -102,7 +102,6 @@
 //! ```
 //!
 use crate::builder::{build_csharp, parse_script};
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Formatter;
 
@@ -181,7 +180,7 @@ impl CSharpConfiguration {
 /// The CSharpBuilder is used to load a Rust script string, and convert it into the appropriate C#
 /// script as a string.
 pub struct CSharpBuilder<'a> {
-    configuration: RefCell<&'a mut CSharpConfiguration>,
+    configuration: &'a mut CSharpConfiguration,
     dll_name: String,
     usings: Vec<String>,
     tokens: syn::File,
@@ -202,7 +201,7 @@ impl<'a> CSharpBuilder<'a> {
     ) -> Result<CSharpBuilder<'a>, Error> {
         match parse_script(script) {
             Ok(tokens) => Ok(CSharpBuilder {
-                configuration: RefCell::new(configuration),
+                configuration,
                 dll_name: dll_name.to_string(),
                 // Load the default usings.
                 usings: vec![
@@ -239,8 +238,8 @@ impl<'a> CSharpBuilder<'a> {
         self.usings.push(using.to_string());
     }
 
-    pub(crate) fn add_known_type(&self, rust_type_name: &str, csharp_type_name: &str) {
-        self.configuration.borrow_mut().add_known_type(
+    pub(crate) fn add_known_type(&mut self, rust_type_name: &str, csharp_type_name: &str) {
+        self.configuration.add_known_type(
             rust_type_name,
             self.namespace.clone(),
             self.type_name.clone(),
